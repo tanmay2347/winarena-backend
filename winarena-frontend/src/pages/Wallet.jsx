@@ -4,24 +4,20 @@ import { Link, useNavigate } from "react-router-dom";
 export default function Wallet() {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0); // 🟢 Dynamic Total Withdrawn State
   const [activeTab, setActiveTab] = useState("add"); 
   const [amount, setAmount] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("UPI");
 
-  const [upiId, setUpiId] = useState("tanmaydeshmukh@okaxis");
+  const [upiId, setUpiId] = useState("");
   const [bankDetails, setBankDetails] = useState({ accNo: "", ifsc: "", name: "" });
   const [paytmNumber, setPaytmNumber] = useState("");
   const [hasArenaAccount, setHasArenaAccount] = useState(false);
 
-  // Custom Success Popup State
   const [popupData, setPopupData] = useState(null);
-
   const userEmail = "user@winarena.com";
-
-  // 🟢 Live Backend URL Constant
   const API_URL = "https://winarena-backend-1.onrender.com";
 
-  // 🛡️ Authentication & Initial Data Load
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
@@ -32,13 +28,24 @@ export default function Wallet() {
       return;
     }
 
+    // 🟢 Wallet Balance (Default 0 for new user)
     const savedBalance = localStorage.getItem("walletBalance");
-    if (savedBalance) {
+    if (savedBalance !== null) {
       setBalance(parseFloat(savedBalance));
     } else {
       localStorage.setItem("walletBalance", "0.00");
       setBalance(0.00);
     }
+
+    // 🟢 Calculate Total Withdrawn dynamically from actual wallet history
+    const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
+    let withdrawnSum = 0;
+    history.forEach(item => {
+      if (item.type && item.type.includes("Withdrawal") && item.amount < 0) {
+        withdrawnSum += Math.abs(item.amount);
+      }
+    });
+    setTotalWithdrawn(withdrawnSum);
 
     const savedArena = localStorage.getItem("arenaWalletAccount");
     if (savedArena) {
@@ -175,6 +182,9 @@ export default function Wallet() {
         setBalance(newBalance);
         localStorage.setItem("walletBalance", newBalance.toFixed(2));
 
+        const updatedWithdrawn = totalWithdrawn + amt;
+        setTotalWithdrawn(updatedWithdrawn);
+
         const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
         const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
         history.unshift({ type: `Withdrawal via ${withdrawMethod}`, amount: -amt, time: new Date().toLocaleString(), txnId: uniqueTxnId, status: "Processing" });
@@ -200,7 +210,6 @@ export default function Wallet() {
   return (
     <div style={{ padding: "16px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "90px", maxWidth: "600px", margin: "0 auto", boxSizing: "border-box", position: "relative" }}>
       
-      {/* CUSTOM SUCCESS POPUP MODAL */}
       {popupData && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, padding: "20px" }}>
           <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", border: "2px solid #fbbf24", borderRadius: "20px", padding: "24px", width: "100%", maxWidth: "380px", textAlign: "center", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }}>
@@ -264,7 +273,8 @@ export default function Wallet() {
         </div>
         <div style={{ textAlign: "right" }}>
           <span style={{ fontSize: "10px", color: "#9ca3af", display: "block", fontWeight: "800" }}>TOTAL WITHDRAWN</span>
-          <strong style={{ fontSize: "14px", color: "#22c55e", fontWeight: "800" }}>₹8,470.00</strong>
+          {/* 🟢 Dynamic Total Withdrawn display */}
+          <strong style={{ fontSize: "14px", color: "#22c55e", fontWeight: "800" }}>₹{totalWithdrawn.toFixed(2)}</strong>
         </div>
       </div>
 

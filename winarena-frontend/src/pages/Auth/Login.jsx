@@ -16,14 +16,29 @@ export default function Login() {
     if (email === ADMIN_UNIQUE_ID && password === ADMIN_PASSWORD) {
       // Agar admin login karta hai
       localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("isAdmin", "true"); // Admin flag set karein
+      localStorage.setItem("isAdmin", "true");
       alert("Welcome Admin!");
-      navigate("/admin"); // Seedha Admin panel par bhej dein
-    } else {
-      // Normal User Login
+      navigate("/admin");
+      return;
+    }
+
+    // 🛡️ Check Normal User in Registered Users Database (LocalStorage)
+    const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers")) || [];
+    const foundUser = registeredUsers.find(
+      (user) => user.email === email && user.password === password
+    );
+
+    if (foundUser) {
+      // Valid user found
       localStorage.setItem("isLoggedIn", "true");
-      localStorage.removeItem("isAdmin"); // User ke liye admin flag hata dein
-      navigate("/"); // Home page par bhej dein
+      localStorage.removeItem("isAdmin");
+      // Save current logged in user profile data
+      localStorage.setItem("userProfile", JSON.stringify(foundUser));
+      alert(`Welcome back, ${foundUser.name}! 🚀`);
+      navigate("/");
+    } else {
+      // Unregistered or wrong credentials
+      alert("Invalid email or password! Please register first if you don't have an account.");
     }
   };
 
