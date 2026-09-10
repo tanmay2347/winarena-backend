@@ -26,6 +26,9 @@ export default function Admin() {
 
   const [roomData, setRoomData] = useState({});
 
+  // 🟢 Live Backend URL Constant
+  const API_URL = "https://winarena-backend-1.onrender.com";
+
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("adminTournaments")) || [];
     setTournaments(stored);
@@ -34,8 +37,7 @@ export default function Admin() {
   }, []);
 
   const fetchWithdrawals = () => {
-    // Fetch withdrawal requests from backend
-    fetch("const API_URL = "https://winarena-backend-1.onrender.com";/api/admin/withdrawals")
+    fetch(`${API_URL}/api/admin/withdrawals`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -47,7 +49,7 @@ export default function Admin() {
 
   const handleApprove = async (id) => {
     try {
-      const res = await fetch("const API_URL = "https://winarena-backend-1.onrender.com";/api/admin/approve-withdrawal", {
+      const res = await fetch(`${API_URL}/api/admin/approve-withdrawal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id })
