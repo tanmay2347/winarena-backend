@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Home from "./pages/Home";
 import Login from "./pages/Auth/Login";
@@ -10,56 +10,46 @@ import Profile from "./pages/Profile";
 import TournamentDetail from "./pages/TournamentDetail";
 import Tournaments from "./pages/Tournaments";
 import Wallet from "./pages/Wallet";
-import WalletDetails from "./pages/WalletDetails"; // <-- Wallet Details & History Import
-import ArenaWallet from "./pages/ArenaWallet"; // <-- Arena P2P Wallet Page Import
+import WalletDetails from "./pages/WalletDetails"; 
+import ArenaWallet from "./pages/ArenaWallet"; 
 import Leaderboard from "./pages/Leaderboard";
-import Support from "./pages/Support"; // <-- Support AI Import
+import Support from "./pages/Support"; 
+
+// 🛡️ Protected Route Component to secure pages from unauthenticated access
+const ProtectedRoute = ({ children }) => {
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const isAdmin = localStorage.getItem("isAdmin") === "true";
+
+  if (!isLoggedIn && !isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
 
 function App() {
   return (
     <Routes>
 
-      {/* HOME */}
-      <Route path="/" element={<Home />} />
-
-      {/* LOGIN */}
+      {/* AUTH ROUTES */}
       <Route path="/login" element={<Login />} />
-
-      {/* REGISTER */}
       <Route path="/register" element={<Register />} />
 
-      {/* GAMES LIST */}
-      <Route path="/games" element={<Games />} />
+      {/* PROTECTED ROUTES (Bina Login ke access nahi milga) */}
+      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/games" element={<ProtectedRoute><Games /></ProtectedRoute>} />
+      <Route path="/games/:gameName" element={<ProtectedRoute><GameDetail /></ProtectedRoute>} />
+      <Route path="/tournaments" element={<ProtectedRoute><Tournaments /></ProtectedRoute>} />
+      <Route path="/tournament/:id" element={<ProtectedRoute><TournamentDetail /></ProtectedRoute>} />
+      <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+      <Route path="/wallet-details" element={<ProtectedRoute><WalletDetails /></ProtectedRoute>} />
+      <Route path="/arena-wallet" element={<ProtectedRoute><ArenaWallet /></ProtectedRoute>} />
+      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+      <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-      {/* SPECIFIC GAME DETAIL PAGE */}
-      <Route path="/games/:gameName" element={<GameDetail />} />
-
-      {/* TOURNAMENTS LIST PAGE */}
-      <Route path="/tournaments" element={<Tournaments />} />
-
-      {/* TOURNAMENT DETAIL & T&C PAGE */}
-      <Route path="/tournament/:id" element={<TournamentDetail />} />
-
-      {/* WALLET ROUTE */}
-      <Route path="/wallet" element={<Wallet />} />
-
-      {/* WALLET DETAILS & TRANSACTION HISTORY ROUTE */}
-      <Route path="/wallet-details" element={<WalletDetails />} />
-
-      {/* ARENA P2P WALLET ROUTE (PhonePe Style) */}
-      <Route path="/arena-wallet" element={<ArenaWallet />} />
-
-      {/* LEADERBOARD ROUTE */}
-      <Route path="/leaderboard" element={<Leaderboard />} />
-
-      {/* SUPPORT AI ROUTE */}
-      <Route path="/support" element={<Support />} />
-
-      {/* ADMIN PANEL ROUTE */}
-      <Route path="/admin" element={<Admin />} />
-
-      {/* PROFILE ROUTE */}
-      <Route path="/profile" element={<Profile />} />
+      {/* Catch-all redirect to login */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
 
     </Routes>
   );
