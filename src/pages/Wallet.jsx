@@ -68,7 +68,7 @@ export default function Wallet() {
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/create-order', {
+      const res = await fetch('const API_URL = "https://winarena-backend-1.onrender.com";/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: amt })
@@ -145,7 +145,7 @@ export default function Wallet() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/withdraw', {
+      const res = await fetch('const API_URL = "https://winarena-backend-1.onrender.com";/api/withdraw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

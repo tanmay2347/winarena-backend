@@ -35,7 +35,7 @@ export default function Admin() {
 
   const fetchWithdrawals = () => {
     // Fetch withdrawal requests from backend
-    fetch("http://localhost:5000/api/admin/withdrawals")
+    fetch("const API_URL = "https://winarena-backend-1.onrender.com";/api/admin/withdrawals")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -47,7 +47,7 @@ export default function Admin() {
 
   const handleApprove = async (id) => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/approve-withdrawal", {
+      const res = await fetch("const API_URL = "https://winarena-backend-1.onrender.com";/api/admin/approve-withdrawal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id })
