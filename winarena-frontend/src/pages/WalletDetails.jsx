@@ -7,15 +7,21 @@ export default function WalletDetails() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const isAdmin = localStorage.getItem("isAdmin") === "true";
+    if (!isLoggedIn && !isAdmin) {
+      alert("Please login first!");
+      navigate("/login");
+      return;
+    }
+
     const savedBalance = localStorage.getItem("walletBalance");
     if (savedBalance) setBalance(parseFloat(savedBalance));
 
-    const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [
-      { type: "Welcome Bonus", amount: 50, time: "2026-06-07 10:00 AM", status: "Success" },
-      { type: "Deposit via UPI", amount: 500, time: "2026-06-07 11:30 AM", status: "Success" }
-    ];
+    // 🟢 Clean history fallback for new users (No dummy data)
+    const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
     setHistory(savedHistory);
-  }, []);
+  }, [navigate]);
 
   return (
     <div style={{ padding: "16px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "90px", maxWidth: "600px", margin: "0 auto", boxSizing: "border-box" }}>
@@ -38,7 +44,7 @@ export default function WalletDetails() {
       
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {history.length === 0 ? (
-          <p style={{ color: "#9ca3af", fontSize: "12px", textAlign: "center", marginTop: "20px" }}>No transactions found.</p>
+          <p style={{ color: "#9ca3af", fontSize: "12px", textAlign: "center", marginTop: "20px" }}>No transactions found yet.</p>
         ) : (
           history.map((item, idx) => {
             const isPositive = item.amount > 0;

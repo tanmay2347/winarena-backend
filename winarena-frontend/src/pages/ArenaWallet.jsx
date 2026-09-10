@@ -8,6 +8,10 @@ export default function ArenaWallet() {
   const [history, setHistory] = useState([]);
   const [userArenaInfo, setUserArenaInfo] = useState(null);
   
+  // 🔒 Arena Wallet Activation State (Default false jab tak ₹29 pay na ho)
+  const [isArenaActive, setIsArenaActive] = useState(false);
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  
   // Modals States
   const [showQrModal, setShowQrModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -45,6 +49,10 @@ export default function ArenaWallet() {
       setBalance(0.00);
     }
 
+    // Check if Arena Wallet is Activated via ₹29 payment
+    const arenaStatus = localStorage.getItem("arenaWalletActive") === "true";
+    setIsArenaActive(arenaStatus);
+
     const savedArena = localStorage.getItem("arenaWalletAccount");
     if (savedArena) {
       setUserArenaInfo(JSON.parse(savedArena));
@@ -56,6 +64,15 @@ export default function ArenaWallet() {
     const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
     setHistory(savedHistory);
   }, [navigate]);
+
+  // Handle ₹29 Activation Payment
+  const handleActivateWallet = () => {
+    // Simulating ₹29 payment success
+    localStorage.setItem("arenaWalletActive", "true");
+    setIsArenaActive(true);
+    setShowActivationModal(false);
+    alert("Arena Wallet successfully activated after paying ₹29! 🎉");
+  };
 
   // Camera Stream Effect when Scanner Modal is Open
   useEffect(() => {
@@ -202,8 +219,43 @@ export default function ArenaWallet() {
   });
 
   return (
-    <div style={{ padding: "16px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "110px", maxWidth: "600px", margin: "0 auto", boxSizing: "border-box" }}>
+    <div style={{ padding: "16px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "110px", maxWidth: "600px", margin: "0 auto", boxSizing: "border-box", position: "relative" }}>
       
+      {/* 🔒 LOCKED OVERLAY IF NOT ACTIVATED */}
+      {!isArenaActive && (
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.95)", zIndex: 998, display: "flex", justifyContent: "center", alignItems: "center", padding: "20px", boxSizing: "border-box" }}>
+          <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #311042 100%)", border: "2px solid #fbbf24", borderRadius: "20px", padding: "24px", width: "100%", maxWidth: "340px", textAlign: "center" }}>
+            <div style={{ fontSize: "40px", marginBottom: "10px" }}>🔒</div>
+            <h2 style={{ color: "#fbbf24", fontSize: "18px", fontWeight: "900", marginBottom: "8px" }}>Arena Wallet Locked</h2>
+            <p style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.5", marginBottom: "16px" }}>
+              To unlock P2P transfers, QR scanning, and exclusive digital wallet features, you must pay a one-time activation fee of <strong style={{ color: "#fbbf24" }}>₹29</strong>.
+            </p>
+            <button 
+              onClick={() => setShowActivationModal(true)}
+              style={{ background: "#fbbf24", color: "#000", border: "none", padding: "12px 20px", borderRadius: "10px", fontWeight: "900", fontSize: "13px", cursor: "pointer", width: "100%" }}
+            >
+              Pay ₹29 to Activate Now ⚡
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ₹29 ACTIVATION PAYMENT MODAL */}
+      {showActivationModal && (
+        <div style={modalOverlayStyle}>
+          <div style={modalBoxStyle}>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "16px" }}>💳 Activate Arena Wallet</h3>
+            <p style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "14px" }}>
+              Pay security fee of <strong style={{ color: "#fbbf24" }}>₹29</strong> to activate your wallet instantly.
+            </p>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={handleActivateWallet} style={btnPrimaryStyle}>Pay ₹29 & Unlock</button>
+              <button onClick={() => setShowActivationModal(false)} style={btnSecondaryStyle}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TOP BAR */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
