@@ -18,7 +18,20 @@ export default function Wallet() {
 
   const userEmail = "user@winarena.com";
 
+  // 🟢 Live Backend URL Constant
+  const API_URL = "https://winarena-backend-1.onrender.com";
+
+  // 🛡️ Authentication & Initial Data Load
   useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const isAdmin = localStorage.getItem("isAdmin") === "true";
+
+    if (!isLoggedIn && !isAdmin) {
+      alert("Please login first to access your wallet!");
+      navigate("/login");
+      return;
+    }
+
     const savedBalance = localStorage.getItem("walletBalance");
     if (savedBalance) {
       setBalance(parseFloat(savedBalance));
@@ -31,7 +44,7 @@ export default function Wallet() {
     if (savedArena) {
       setHasArenaAccount(true);
     }
-  }, []);
+  }, [navigate]);
 
   const handleAddMoney = async (e) => {
     e.preventDefault();
@@ -68,7 +81,7 @@ export default function Wallet() {
     };
 
     try {
-      const res = await fetch('const API_URL = "https://winarena-backend-1.onrender.com";/api/create-order', {
+      const res = await fetch(`${API_URL}/api/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: amt })
@@ -134,7 +147,6 @@ export default function Wallet() {
       return;
     }
 
-    // Prepare payout details based on selected method
     let payoutDetails = {};
     if (withdrawMethod === "UPI") {
       payoutDetails = { upiId };
@@ -145,7 +157,7 @@ export default function Wallet() {
     }
 
     try {
-      const res = await fetch('const API_URL = "https://winarena-backend-1.onrender.com";/api/withdraw', {
+      const res = await fetch(`${API_URL}/api/withdraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -153,7 +165,7 @@ export default function Wallet() {
           userEmail: userEmail,
           amount: amt,
           method: withdrawMethod,
-          details: payoutDetails // Sent to backend
+          details: payoutDetails
         })
       });
       const data = await res.json();
@@ -169,11 +181,10 @@ export default function Wallet() {
         localStorage.setItem("walletHistory", JSON.stringify(history));
 
         setAmount("");
-        // Show Custom Nice Popup
         setPopupData({
           title: "Withdrawal Request Submitted! 🚀",
-          message: `Requested: ₹${amt} (Fee: ₹${data.commissionDeducted.toFixed(2)})`,
-          payout: `Final Payout: ₹${data.payoutToUser.toFixed(2)}`,
+          message: `Requested: ₹${amt} (Fee: ₹${data.commissionDeducted?.toFixed(2) || 0})`,
+          payout: `Final Payout: ₹${data.payoutToUser?.toFixed(2) || amt}`,
           txnId: uniqueTxnId,
           subtext: "Money will be credited to your account within 24 hours!"
         });

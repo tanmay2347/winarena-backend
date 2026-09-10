@@ -4,10 +4,10 @@ import { Link, useNavigate } from "react-router-dom";
 export default function Profile() {
   const navigate = useNavigate();
   const [walletBalance, setWalletBalance] = useState("0.00");
-  const [userName, setUserName] = useState("Tanmay_Deshmukh");
-  const [email, setEmail] = useState("tanmay@example.com");
-  const [mobile, setMobile] = useState("9876543210");
-  const [playerId] = useState("WA239874");
+  const [userName, setUserName] = useState("User");
+  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [playerId, setPlayerId] = useState("WA000000");
 
   // User Stats based on Tournaments participation
   const [totalGames, setTotalGames] = useState(0);
@@ -24,7 +24,18 @@ export default function Profile() {
   const [activeModal, setActiveModal] = useState(null);
   const [passwordData, setPasswordData] = useState({ current: "", newPass: "" });
 
+  // 🛡️ Authentication & Data Load Check
   useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const isAdmin = localStorage.getItem("isAdmin") === "true";
+    
+    // Agar user logged in nahi hai, toh login page par bhej dein
+    if (!isLoggedIn && !isAdmin) {
+      alert("Please login first to view your profile!");
+      navigate("/login");
+      return;
+    }
+
     const savedBalance = localStorage.getItem("walletBalance");
     if (savedBalance) {
       setWalletBalance(parseFloat(savedBalance).toFixed(2));
@@ -35,6 +46,10 @@ export default function Profile() {
       if (savedUser.name) setUserName(savedUser.name);
       if (savedUser.email) setEmail(savedUser.email);
       if (savedUser.mobile) setMobile(savedUser.mobile);
+      if (savedUser.playerId) setPlayerId(savedUser.playerId);
+    } else {
+      // Default generated ID if not present
+      setPlayerId("WA" + Math.floor(100000 + Math.random() * 900000));
     }
 
     const allTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
@@ -50,17 +65,12 @@ export default function Profile() {
       }
     });
 
-    if (gamesCount === 0) {
-      gamesCount = 24;
-      winsCount = 12;
-      winningsSum = 1250;
-    }
-
     setTotalGames(gamesCount);
     setTotalWins(winsCount);
-    setWinRate(((winsCount / gamesCount) * 100).toFixed(1) + "%");
+    setWinRate(gamesCount > 0 ? ((winsCount / gamesCount) * 100).toFixed(1) + "%" : "0%");
     setTotalWinnings(winningsSum);
 
+    // Dynamic Level Calculation based on winnings
     let level = 0;
     let target = 50;
     let accumulated = 0;
@@ -74,18 +84,19 @@ export default function Profile() {
     setCurrentLevel(level);
     setNextLevelTarget(target);
     const progressInCurrentLevel = winningsSum - accumulated;
-    setLevelProgress(Math.min(Math.round((progressInCurrentLevel / target) * 100), 100));
+    setLevelProgress(target > 0 ? Math.min(Math.round((progressInCurrentLevel / target) * 100), 100) : 0);
 
-  }, [userName]);
+  }, [navigate, userName]);
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("isAdmin");
     navigate("/login");
   };
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
-    localStorage.setItem("userProfile", JSON.stringify({ name: userName, email, mobile }));
+    localStorage.setItem("userProfile", JSON.stringify({ name: userName, email, mobile, playerId }));
     alert("Profile updated successfully! 🚀");
     setActiveModal(null);
   };
@@ -218,7 +229,6 @@ export default function Profile() {
           <span style={{ color: "#fbbf24", fontSize: "14px" }}>›</span>
         </div>
 
-        {/* About WinArena Button opens Modal now */}
         <div onClick={() => setActiveModal("about")} style={menuCardStyle}>
           <div style={menuContentStyle}>
             <span style={{ fontSize: "18px" }}>ℹ️</span>
@@ -328,7 +338,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 5. ABOUT WINARENA MODAL (Detailed Info Popup) */}
+      {/* 5. ABOUT WINARENA MODAL */}
       {activeModal === "about" && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
@@ -338,7 +348,7 @@ export default function Profile() {
               <p><strong>Key Features:</strong></p>
               <ul style={{ paddingLeft: "16px", margin: "4px 0" }}>
                 <li>Daily Free Fire, Carrom, and Ludo tournaments.</li>
-                <li>Instant UPI & Bank withdrawals with 2.5% security fee.</li>
+                <li>Instant UPI & Bank withdrawals with secure fee handling.</li>
                 <li>Secure Room ID & Password distribution.</li>
               </ul>
               <p style={{ marginTop: "8px", color: "#9ca3af" }}>© 2026 WinArena Inc. All rights reserved. Play Responsibly.</p>
