@@ -24,33 +24,38 @@ export default function ArenaWallet() {
   const [actionType, setActionType] = useState(null); // "add" or "withdraw"
   const [amount, setAmount] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("UPI");
-  const [upiId, setUpiId] = useState("tanmaydeshmukh@okaxis");
+  const [upiId, setUpiId] = useState("");
   const [bankDetails, setBankDetails] = useState({ accNo: "", ifsc: "", name: "" });
   const [paytmNumber, setPaytmNumber] = useState("");
 
   useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const isAdmin = localStorage.getItem("isAdmin") === "true";
+    if (!isLoggedIn && !isAdmin) {
+      alert("Please login first!");
+      navigate("/login");
+      return;
+    }
+
     const savedBalance = localStorage.getItem("walletBalance");
     if (savedBalance) {
       setBalance(parseFloat(savedBalance));
     } else {
-      localStorage.setItem("walletBalance", "371.00");
-      setBalance(371.00);
+      localStorage.setItem("walletBalance", "0.00");
+      setBalance(0.00);
     }
 
     const savedArena = localStorage.getItem("arenaWalletAccount");
     if (savedArena) {
       setUserArenaInfo(JSON.parse(savedArena));
     } else {
-      setUserArenaInfo({ mobile: "8857824607", qrCodeText: "WINARENA-P2P-WALLET", email: "tanmaydeshmukh2347@gmail.com" });
+      setUserArenaInfo({ mobile: "8857824607", qrCodeText: "WINARENA-P2P-WALLET", email: "user@winarena.com" });
     }
 
-    const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [
-      { type: "Welcome Bonus", amount: 50, time: "2026-06-07 10:00 AM", txnId: "TXN102938475", status: "Success" },
-      { type: "Deposit via UPI", amount: 500, time: "2026-06-07 11:30 AM", txnId: "TXN584930219", status: "Success" },
-      { type: "Tournament Entry", amount: -20, time: "2026-06-08 02:00 PM", txnId: "TXN493021857", status: "Success" }
-    ];
+    // 🟢 Clean history for new users (Removed hardcoded dummy data)
+    const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
     setHistory(savedHistory);
-  }, []);
+  }, [navigate]);
 
   // Camera Stream Effect when Scanner Modal is Open
   useEffect(() => {
@@ -264,7 +269,7 @@ export default function ArenaWallet() {
       
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
         {filteredHistory.length === 0 ? (
-          <p style={{ color: "#9ca3af", fontSize: "12px", textAlign: "center", marginTop: "10px" }}>No matching transactions found.</p>
+          <p style={{ color: "#9ca3af", fontSize: "12px", textAlign: "center", marginTop: "10px" }}>No transactions found yet.</p>
         ) : (
           filteredHistory.map((item, idx) => {
             const isPositive = item.amount > 0;
@@ -306,7 +311,7 @@ export default function ArenaWallet() {
         </div>
       )}
 
-      {/* LIVE CAMERA SCANNER MODAL (Opens when bottom Scan button is clicked) */}
+      {/* LIVE CAMERA SCANNER MODAL */}
       {showScannerModal && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
@@ -496,7 +501,7 @@ export default function ArenaWallet() {
           <small style={{ fontSize: "10px", color: "#fbbf24", fontWeight: "900" }}>Search</small>
         </div>
 
-        {/* SCAN BUTTON OPENS LIVE CAMERA SCANNER MODAL */}
+        {/* SCAN BUTTON */}
         <div 
           onClick={() => setShowScannerModal(true)}
           style={{
