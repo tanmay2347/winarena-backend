@@ -36,8 +36,8 @@ export default function Wallet() {
     if (savedBalance) {
       setBalance(parseFloat(savedBalance));
     } else {
-      localStorage.setItem("walletBalance", "371.00");
-      setBalance(371.00);
+      localStorage.setItem("walletBalance", "0.00");
+      setBalance(0.00);
     }
 
     const savedArena = localStorage.getItem("arenaWalletAccount");
