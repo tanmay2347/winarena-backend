@@ -109,7 +109,7 @@ export default function Home() {
       </header>
 
 
-      {/* ================= HERO AUTO-SCROLLER ================= */}
+      {/* ================= HERO AUTO-SCROLLER (Dots removed) ================= */}
       <section className="hero" style={{ position: "relative", overflow: "hidden" }}>
         <img 
           src={banners[currentSlide]} 
@@ -159,23 +159,6 @@ export default function Home() {
             JOIN TOURNAMENT <span>→</span>
           </div>
         </div>
-
-        <div className="slider-dots" style={{ position: "relative", zIndex: 3, display: "flex", gap: "6px" }}>
-          {banners.map((_, index) => (
-            <span 
-              key={index} 
-              onClick={() => setCurrentSlide(index)}
-              style={{ 
-                cursor: "pointer", 
-                width: currentSlide === index ? "20px" : "8px", 
-                height: "8px", 
-                borderRadius: "4px", 
-                background: currentSlide === index ? "#fbbf24" : "rgba(255,255,255,0.4)",
-                transition: "all 0.3s ease"
-              }}
-            ></span>
-          ))}
-        </div>
       </section>
 
 
@@ -197,7 +180,7 @@ export default function Home() {
       </section>
 
 
-      {/* ================= LIVE TOURNAMENTS ================= */}
+      {/* ================= LIVE TOURNAMENTS (Sorted by time) ================= */}
       <SectionTitle title="LIVE TOURNAMENTS" live onViewAll={() => handleNavigation("/tournaments")} />
       <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", padding: "0 16px" }}>
         {(
@@ -207,7 +190,7 @@ export default function Home() {
             { game: "LUDO", mode: "2 PLAYER", entry: "10", prize: "300", image: "/ludo.png", startTime: new Date("2026-06-07T16:00:00").getTime() }
           ]
         )
-        .sort((a, b) => a.startTime - b.startTime)
+        .sort((a, b) => (a.startTime || 0) - (b.startTime || 0))
         .map((tournament, index) => (
           <div key={index} onClick={() => handleNavigation("/tournaments")} style={{ displayContents: "contents" }}>
             <Tournament game={tournament.game} mode={tournament.mode} entry={tournament.entry} prize={tournament.prize} image={tournament.image} />

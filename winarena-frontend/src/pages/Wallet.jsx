@@ -284,10 +284,10 @@ export default function Wallet() {
           <span style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "900", display: "block", marginBottom: "10px" }}>⚡ Select Withdrawal Method</span>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
             {[
-              { id: "UPI", name: "UPI", time: "24 Hrs" },
-              { id: "Bank", name: "Bank", time: "24 Hrs" },
-              { id: "Paytm", name: "Paytm", time: "24 Hrs" },
-              { id: "Wallet", name: "Arena Wallet", time: "Instant" }
+              { id: "UPI", name: "UPI", icon: "📱", time: "24 Hrs" },
+              { id: "Bank", name: "Bank", icon: "🏦", time: "24 Hrs" },
+              { id: "Paytm", name: "Paytm", icon: "💳", time: "24 Hrs" },
+              { id: "Wallet", name: "Arena Wallet", icon: "⚡", time: "Instant" }
             ].map((m) => (
               <div 
                 key={m.id}
@@ -302,6 +302,7 @@ export default function Wallet() {
                 }}
               >
                 {withdrawMethod === m.id && <span style={{ position: "absolute", top: "4px", right: "6px", color: "#fbbf24", fontSize: "10px", fontWeight: "900" }}>✓</span>}
+                <div style={{ fontSize: "16px", marginBottom: "2px" }}>{m.icon}</div>
                 <div style={{ fontSize: "11px", fontWeight: "900", color: "#fff", marginBottom: "2px" }}>{m.name}</div>
                 <span style={{ fontSize: "8px", color: "#22c55e", fontWeight: "800", background: "rgba(34,197,94,0.15)", padding: "1px 4px", borderRadius: "4px", display: "inline-block" }}>{m.time}</span>
               </div>

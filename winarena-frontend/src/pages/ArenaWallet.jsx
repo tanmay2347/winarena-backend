@@ -8,10 +8,9 @@ export default function ArenaWallet() {
   const [history, setHistory] = useState([]);
   const [userArenaInfo, setUserArenaInfo] = useState(null);
   
-  // 🔒 Arena Wallet Activation State (Default false jab tak ₹29 pay na ho)
-  const [isArenaActive, setIsArenaActive] = useState(false);
-  const [showActivationModal, setShowActivationModal] = useState(false);
-  
+  // 🟢 Activation State (₹29 Lock Condition)
+  const [isActivated, setIsActivated] = useState(false);
+
   // Modals States
   const [showQrModal, setShowQrModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -41,6 +40,10 @@ export default function ArenaWallet() {
       return;
     }
 
+    // Check if Arena Wallet is already activated via ₹29 payment
+    const activatedStatus = localStorage.getItem("arenaWalletActivated") === "true";
+    setIsActivated(activatedStatus);
+
     const savedBalance = localStorage.getItem("walletBalance");
     if (savedBalance) {
       setBalance(parseFloat(savedBalance));
@@ -49,10 +52,6 @@ export default function ArenaWallet() {
       setBalance(0.00);
     }
 
-    // Check if Arena Wallet is Activated via ₹29 payment
-    const arenaStatus = localStorage.getItem("arenaWalletActive") === "true";
-    setIsArenaActive(arenaStatus);
-
     const savedArena = localStorage.getItem("arenaWalletAccount");
     if (savedArena) {
       setUserArenaInfo(JSON.parse(savedArena));
@@ -60,18 +59,16 @@ export default function ArenaWallet() {
       setUserArenaInfo({ mobile: "8857824607", qrCodeText: "WINARENA-P2P-WALLET", email: "user@winarena.com" });
     }
 
-    // 🟢 Clean history for new users (Removed hardcoded dummy data)
     const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
     setHistory(savedHistory);
   }, [navigate]);
 
   // Handle ₹29 Activation Payment
   const handleActivateWallet = () => {
-    // Simulating ₹29 payment success
-    localStorage.setItem("arenaWalletActive", "true");
-    setIsArenaActive(true);
-    setShowActivationModal(false);
-    alert("Arena Wallet successfully activated after paying ₹29! 🎉");
+    // Simulate successful payment of ₹29 for activation
+    localStorage.setItem("arenaWalletActivated", "true");
+    setIsActivated(true);
+    alert("🎉 Arena Wallet Activated Successfully! Welcome to P2P Gaming.");
   };
 
   // Camera Stream Effect when Scanner Modal is Open
@@ -218,44 +215,39 @@ export default function ArenaWallet() {
     return typeMatch || txnMatch;
   });
 
+  // 🔒 IF NOT ACTIVATED, SHOW ₹29 PAYMENT LOCK SCREEN
+  if (!isActivated) {
+    return (
+      <div style={{ padding: "20px", color: "#fff", background: "#0f172a", minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", boxSizing: "border-box" }}>
+        <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #311042 100%)", border: "2px solid #fbbf24", borderRadius: "20px", padding: "28px", maxWidth: "380px", width: "100%", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+          <div style={{ fontSize: "45px", marginBottom: "12px" }}>🔒</div>
+          <h2 style={{ color: "#fbbf24", fontSize: "20px", fontWeight: "900", marginBottom: "8px" }}>Arena Wallet Locked</h2>
+          <p style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.5", marginBottom: "20px" }}>
+            To unlock instant P2P transfers, QR code scanning, and zero-fee gaming payouts, you need to pay a one-time activation fee of <strong style={{ color: "#22c55e" }}>₹29</strong>.
+          </p>
+          <div style={{ background: "rgba(251,191,36,0.1)", border: "1px dashed #fbbf24", padding: "10px", borderRadius: "10px", marginBottom: "20px" }}>
+            <span style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "800" }}>⚡ Activation Fee: ₹29.00 Only</span>
+          </div>
+          <button 
+            onClick={handleActivateWallet}
+            style={{ background: "#fbbf24", color: "#000", border: "none", padding: "12px 20px", borderRadius: "10px", fontWeight: "900", fontSize: "13px", cursor: "pointer", width: "100%", marginBottom: "10px" }}
+          >
+            Pay ₹29 & Activate Now 🚀
+          </button>
+          <button 
+            onClick={() => navigate("/")}
+            style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "10px", fontWeight: "900", fontSize: "12px", cursor: "pointer", width: "100%" }}
+          >
+            Back to Home 🏠
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: "16px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "110px", maxWidth: "600px", margin: "0 auto", boxSizing: "border-box", position: "relative" }}>
+    <div style={{ padding: "16px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "110px", maxWidth: "600px", margin: "0 auto", boxSizing: "border-box" }}>
       
-      {/* 🔒 LOCKED OVERLAY IF NOT ACTIVATED */}
-      {!isArenaActive && (
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.95)", zIndex: 998, display: "flex", justifyContent: "center", alignItems: "center", padding: "20px", boxSizing: "border-box" }}>
-          <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #311042 100%)", border: "2px solid #fbbf24", borderRadius: "20px", padding: "24px", width: "100%", maxWidth: "340px", textAlign: "center" }}>
-            <div style={{ fontSize: "40px", marginBottom: "10px" }}>🔒</div>
-            <h2 style={{ color: "#fbbf24", fontSize: "18px", fontWeight: "900", marginBottom: "8px" }}>Arena Wallet Locked</h2>
-            <p style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.5", marginBottom: "16px" }}>
-              To unlock P2P transfers, QR scanning, and exclusive digital wallet features, you must pay a one-time activation fee of <strong style={{ color: "#fbbf24" }}>₹29</strong>.
-            </p>
-            <button 
-              onClick={() => setShowActivationModal(true)}
-              style={{ background: "#fbbf24", color: "#000", border: "none", padding: "12px 20px", borderRadius: "10px", fontWeight: "900", fontSize: "13px", cursor: "pointer", width: "100%" }}
-            >
-              Pay ₹29 to Activate Now ⚡
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ₹29 ACTIVATION PAYMENT MODAL */}
-      {showActivationModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalBoxStyle}>
-            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "16px" }}>💳 Activate Arena Wallet</h3>
-            <p style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "14px" }}>
-              Pay security fee of <strong style={{ color: "#fbbf24" }}>₹29</strong> to activate your wallet instantly.
-            </p>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={handleActivateWallet} style={btnPrimaryStyle}>Pay ₹29 & Unlock</button>
-              <button onClick={() => setShowActivationModal(false)} style={btnSecondaryStyle}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* TOP BAR */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -291,7 +283,7 @@ export default function ArenaWallet() {
 
       {/* WIN ARENA DIGITAL WALLET BANNER */}
       <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #311042 100%)", borderRadius: "16px", border: "1px solid rgba(251,191,36,0.3)", padding: "24px 20px", marginBottom: "20px", textAlign: "center" }}>
-        <span style={{ fontSize: "10px", color: "#fbbf24", fontWeight: "800", letterSpacing: "1px", display: "block", marginBottom: "4px" }}>WIN ARENA DIGITAL WALLET</span>
+        <span style={{ fontSize: "10px", color: "#fbbf24", fontWeight: "800", letterSpacing: "1px", display: "block", marginBottom: "4px" }}>WIN ARENA DIGITAL WALLET (ACTIVATED ✓)</span>
         <h2 style={{ fontSize: "36px", color: "#fff", margin: "0 0 4px 0", fontWeight: "900" }}>₹{balance.toFixed(2)}</h2>
         <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 16px 0" }}>Fast, secure P2P transfers & tournament payouts</p>
         
