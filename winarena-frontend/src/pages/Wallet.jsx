@@ -384,4 +384,4 @@ export default function Wallet() {
 
 const inputStyle = {
   width: "100%", padding: "10px", borderRadius: "8px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "12px", boxSizing: "border-box"
-};
+};2575
