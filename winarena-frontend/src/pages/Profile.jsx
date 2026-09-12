@@ -29,7 +29,6 @@ export default function Profile() {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
     
-    // Agar user logged in nahi hai, toh login page par bhej dein
     if (!isLoggedIn && !isAdmin) {
       alert("Please login first to view your profile!");
       navigate("/login");
@@ -41,14 +40,23 @@ export default function Profile() {
       setWalletBalance(parseFloat(savedBalance).toFixed(2));
     }
 
+    // 🔴 Fixed: Synchronized with both `userProfile` and individual keys
     const savedUser = JSON.parse(localStorage.getItem("userProfile"));
+    const singleUserName = localStorage.getItem("userName");
+    const singleEmail = localStorage.getItem("userEmail");
+    const singleMobile = localStorage.getItem("userMobile");
+
     if (savedUser) {
       if (savedUser.name) setUserName(savedUser.name);
       if (savedUser.email) setEmail(savedUser.email);
       if (savedUser.mobile) setMobile(savedUser.mobile);
       if (savedUser.playerId) setPlayerId(savedUser.playerId);
+    } else if (singleUserName || singleEmail || singleMobile) {
+      if (singleUserName) setUserName(singleUserName);
+      if (singleEmail) setEmail(singleEmail);
+      if (singleMobile) setMobile(singleMobile);
+      setPlayerId("WA" + Math.floor(100000 + Math.random() * 900000));
     } else {
-      // Default generated ID if not present
       setPlayerId("WA" + Math.floor(100000 + Math.random() * 900000));
     }
 
@@ -94,9 +102,15 @@ export default function Profile() {
     navigate("/login");
   };
 
+  // 🔴 Fixed: Save profile details to all necessary localStorage keys simultaneously
   const handleSaveProfile = (e) => {
     e.preventDefault();
-    localStorage.setItem("userProfile", JSON.stringify({ name: userName, email, mobile, playerId }));
+    const profileData = { name: userName, email, mobile, playerId };
+    localStorage.setItem("userProfile", JSON.stringify(profileData));
+    localStorage.setItem("userName", userName);
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userMobile", mobile);
+    
     alert("Profile updated successfully! 🚀");
     setActiveModal(null);
   };
