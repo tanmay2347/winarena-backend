@@ -30,11 +30,23 @@ export default function Admin() {
   const API_URL = "https://winarena-backend-1.onrender.com";
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("adminTournaments")) || [];
-    setTournaments(stored);
-
+    fetchTournaments();
     fetchWithdrawals();
   }, []);
+
+  // 🟢 Fetch Tournaments from Backend MongoDB
+  const fetchTournaments = () => {
+    fetch(`${API_URL}/api/tournaments`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setTournaments(data);
+        } else if (data.tournaments) {
+          setTournaments(data.tournaments);
+        }
+      })
+      .catch((err) => console.error("Error fetching tournaments:", err));
+  };
 
   const fetchWithdrawals = () => {
     fetch(`${API_URL}/api/admin/withdrawals`)
@@ -57,7 +69,7 @@ export default function Admin() {
       const data = await res.json();
       if (data.success) {
         alert("Withdrawal Approved Successfully! ✅");
-        fetchWithdrawals(); // Refresh list
+        fetchWithdrawals();
       } else {
         alert(data.message || "Failed to approve");
       }
@@ -67,12 +79,12 @@ export default function Admin() {
     }
   };
 
-  const handleCreateTournament = (e) => {
+  // 🟢 Create Tournament via Backend API
+  const handleCreateTournament = async (e) => {
     e.preventDefault();
     const matchTimestamp = startTime ? new Date(startTime).getTime() : Date.now() + 3600000;
 
     const newTournament = {
-      id: Date.now(),
       game,
       mode,
       entry,
@@ -85,47 +97,76 @@ export default function Admin() {
       startTime: matchTimestamp
     };
 
-    const updated = [...tournaments, newTournament];
-    setTournaments(updated);
-    localStorage.setItem("adminTournaments", JSON.stringify(updated));
-
-    alert("Tournament Successfully Created & Live!");
-    setMode("SOLO");
-    setEntry("10");
-    setPrize("500");
-    setTotalSlots("10");
-    setStartTime("");
+    try {
+      const res = await fetch(`${API_URL}/api/tournaments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTournament)
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert("Tournament Successfully Created & Live in Database! 🚀");
+        fetchTournaments(); // Refresh list from server
+        setMode("SOLO");
+        setEntry("10");
+        setPrize("500");
+        setTotalSlots("10");
+        setStartTime("");
+      } else {
+        alert(data.message || "Failed to create tournament");
+      }
+    } catch (err) {
+      console.error("Create tournament error:", err);
+      alert("Server error while creating tournament");
+    }
   };
 
-  const handlePublishRoom = (id) => {
+  // 🟢 Publish Room Credentials via Backend API
+  const handlePublishRoom = async (id) => {
     const { roomId, roomPass } = roomData[id] || {};
     if (!roomId || !roomPass) {
       alert("Please enter both Room ID and Password!");
       return;
     }
 
-    const updatedAdminTournaments = tournaments.map((t) => t.id === id ? { ...t, roomId, roomPass } : t);
-    setTournaments(updatedAdminTournaments);
-    localStorage.setItem("adminTournaments", JSON.stringify(updatedAdminTournaments));
+    try {
+      const res = await fetch(`${API_URL}/api/tournaments/room`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tournamentId: id, roomId, roomPass })
+      });
+      const data = await res.json();
 
-    const myJoined = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
-    const updatedJoined = myJoined.map((t) => t.id === id ? { ...t, roomId, roomPass } : t);
-    localStorage.setItem("myJoinedTournaments", JSON.stringify(updatedJoined));
-
-    alert("Room ID & Password Published Successfully to Users! 🚀");
+      if (res.ok || data.success) {
+        alert("Room ID & Password Published Successfully to Database! 🚀");
+        fetchTournaments();
+      } else {
+        alert(data.message || "Failed to publish room details");
+      }
+    } catch (err) {
+      console.error("Publish room error:", err);
+      alert("Server error while publishing room details");
+    }
   };
 
-  const handleDeleteTournament = (id) => {
+  // 🟢 Delete Tournament via Backend API
+  const handleDeleteTournament = async (id) => {
     if (window.confirm("Are you sure you want to delete this tournament?")) {
-      const updatedAdminTournaments = tournaments.filter((t) => t.id !== id);
-      setTournaments(updatedAdminTournaments);
-      localStorage.setItem("adminTournaments", JSON.stringify(updatedAdminTournaments));
-
-      const myJoined = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
-      const updatedJoined = myJoined.filter((t) => t.id !== id);
-      localStorage.setItem("myJoinedTournaments", JSON.stringify(updatedJoined));
-
-      alert("Tournament Deleted Successfully!");
+      try {
+        const res = await fetch(`${API_URL}/api/tournaments/${id}`, {
+          method: "DELETE"
+        });
+        if (res.ok) {
+          alert("Tournament Deleted Successfully!");
+          fetchTournaments();
+        } else {
+          alert("Failed to delete tournament");
+        }
+      } catch (err) {
+        console.error("Delete error:", err);
+        alert("Server error during deletion");
+      }
     }
   };
 
@@ -154,7 +195,7 @@ export default function Admin() {
         {activeTab === "tournaments" ? "ADMIN PANEL - MANAGE TOURNAMENTS" : "ADMIN PANEL - USER WITHDRAWALS"}
       </h1>
       <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "20px" }}>
-        {activeTab === "tournaments" ? "Naye tournaments banayein, Room ID publish karein." : "Users dwara bheje gaye withdrawals ki date, time aur amount yahan dekhein aur approve karein."}
+        {activeTab === "tournaments" ? "Naye tournaments banayein, Room ID publish karein (MongoDB Connected)." : "Users dwara bheje gaye withdrawals ki date, time aur amount yahan dekhein aur approve karein."}
       </p>
 
       {/* CONDITIONAL RENDERING BASED ON TAB */}
@@ -219,48 +260,51 @@ export default function Admin() {
             <p style={{ color: "#9ca3af", fontSize: "12px" }}>No tournaments created yet.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {tournaments.map((t) => (
-                <div key={t.id} style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", padding: "14px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)" }}>
-                  
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <h4 style={{ margin: 0, fontSize: "13px", color: "#fff" }}>{t.game} - {t.mode}</h4>
-                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>Slots: {t.registeredUsers?.length || 0}/{t.totalSlots}</span>
-                  </div>
+              {tournaments.map((t) => {
+                const tournamentId = t._id || t.id;
+                return (
+                  <div key={tournamentId} style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", padding: "14px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)" }}>
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                      <h4 style={{ margin: 0, fontSize: "13px", color: "#fff" }}>{t.game} - {t.mode}</h4>
+                      <span style={{ fontSize: "10px", color: "#9ca3af" }}>Slots: {t.registeredUsers?.length || 0}/{t.totalSlots}</span>
+                    </div>
 
-                  <div style={{ background: "rgba(251, 191, 36, 0.15)", color: "#fbbf24", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "800", display: "inline-block", marginBottom: "10px" }}>
-                    📅 Match Time: {new Date(t.startTime).toLocaleString()}
-                  </div>
+                    <div style={{ background: "rgba(251, 191, 36, 0.15)", color: "#fbbf24", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "800", display: "inline-block", marginBottom: "10px" }}>
+                      📅 Match Time: {new Date(t.startTime).toLocaleString()}
+                    </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>
-                    <input 
-                      type="text" placeholder="Room ID" defaultValue={t.roomId || ""}
-                      onChange={(e) => setRoomData({ ...roomData, [t.id]: { ...roomData[t.id], roomId: e.target.value } })}
-                      style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "11px", boxSizing: "border-box" }}
-                    />
-                    <input 
-                      type="text" placeholder="Password" defaultValue={t.roomPass || ""}
-                      onChange={(e) => setRoomData({ ...roomData, [t.id]: { ...roomData[t.id], roomPass: e.target.value } })}
-                      style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "11px", boxSizing: "border-box" }}
-                    />
-                  </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>
+                      <input 
+                        type="text" placeholder="Room ID" defaultValue={t.roomId || ""}
+                        onChange={(e) => setRoomData({ ...roomData, [tournamentId]: { ...roomData[tournamentId], roomId: e.target.value } })}
+                        style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "11px", boxSizing: "border-box" }}
+                      />
+                      <input 
+                        type="text" placeholder="Password" defaultValue={t.roomPass || ""}
+                        onChange={(e) => setRoomData({ ...roomData, [tournamentId]: { ...roomData[tournamentId], roomPass: e.target.value } })}
+                        style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "11px", boxSizing: "border-box" }}
+                      />
+                    </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px" }}>
-                    <button 
-                      onClick={() => handlePublishRoom(t.id)}
-                      style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontWeight: "800", cursor: "pointer", fontSize: "11px" }}
-                    >
-                      PUBLISH ROOM CREDENTIALS 🔑
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteTournament(t.id)}
-                      style={{ background: "#ef4444", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "6px", fontWeight: "800", cursor: "pointer", fontSize: "11px" }}
-                    >
-                      🗑️ DELETE
-                    </button>
-                  </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px" }}>
+                      <button 
+                        onClick={() => handlePublishRoom(tournamentId)}
+                        style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontWeight: "800", cursor: "pointer", fontSize: "11px" }}
+                      >
+                        PUBLISH ROOM CREDENTIALS 🔑
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteTournament(tournamentId)}
+                        style={{ background: "#ef4444", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "6px", fontWeight: "800", cursor: "pointer", fontSize: "11px" }}
+                      >
+                        🗑️ DELETE
+                      </button>
+                    </div>
 
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </>

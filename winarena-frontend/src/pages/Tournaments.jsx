@@ -4,16 +4,45 @@ import { Link, useNavigate } from "react-router-dom";
 export default function Tournaments() {
   const navigate = useNavigate();
   const [joinedTournaments, setJoinedTournaments] = useState([]);
+  
+  // 🟢 Live Backend URL Constant
+  const API_URL = "https://winarena-backend-1.onrender.com";
 
   useEffect(() => {
-    try {
-      const data = localStorage.getItem("myJoinedTournaments");
-      if (data) {
-        setJoinedTournaments(JSON.parse(data));
-      }
-    } catch (e) {
-      console.error("Error reading tournaments", e);
-    }
+    // 🟢 Fetch Tournaments from Backend MongoDB Database & filter joined ones
+    fetch(`${API_URL}/api/tournaments`)
+      .then((res) => res.json())
+      .then((data) => {
+        const allTournaments = Array.isArray(data) ? data : (data.tournaments || []);
+        
+        // Agar user ne local mein joined save kiya hai ya backend se match karein
+        const localJoinedIds = JSON.parse(localStorage.getItem("myJoinedTournamentIds")) || [];
+        
+        // For demonstration, if user joined via localStorage or backend registered users
+        const userEmail = localStorage.getItem("userEmail") || "";
+        const userName = localStorage.getItem("userName") || "";
+
+        const joined = allTournaments.filter((t) => {
+          const isLocallyJoined = localJoinedIds.includes(t._id || t.id);
+          const isRegisteredInDb = t.registeredUsers && (t.registeredUsers.includes(userName) || t.registeredUsers.includes(userEmail));
+          return isLocallyJoined || isRegisteredInDb;
+        });
+
+        // Fallback to legacy local storage if backend returns empty but local storage has items
+        if (joined.length === 0) {
+          const fallbackData = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
+          setJoinedTournaments(fallbackData);
+        } else {
+          setJoinedTournaments(joined);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching tournaments from backend, falling back to local storage:", err);
+        const data = localStorage.getItem("myJoinedTournaments");
+        if (data) {
+          setJoinedTournaments(JSON.parse(data));
+        }
+      });
   }, []);
 
   return (
@@ -25,7 +54,7 @@ export default function Tournaments() {
           MY JOINED TOURNAMENTS
         </h1>
         <p style={{ color: "#9ca3af", fontSize: "12px", margin: 0 }}>
-          Aapke sabhi registered matches aur room details yahan show honge.
+          Aapke sabhi registered matches aur room details yahan show honge (Live Synced).
         </p>
       </div>
 
@@ -45,7 +74,7 @@ export default function Tournaments() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {joinedTournaments.map((tournament, index) => (
-            <JoinedTournamentCard key={index} tournament={tournament} />
+            <JoinedTournamentCard key={tournament._id || index} tournament={tournament} />
           ))}
         </div>
       )}
@@ -126,7 +155,7 @@ function JoinedTournamentCard({ tournament }) {
         <span style={{ fontSize: "12px", letterSpacing: "1px" }}>{timeLeft}</span>
       </div>
 
-      {/* ROOM ID & PASSWORD SECTION (Sirf tab dikhega jab admin publish karega) */}
+      {/* ROOM ID & PASSWORD SECTION */}
       {tournament.roomId && tournament.roomPass ? (
         <div style={{ background: "rgba(34, 197, 94, 0.15)", border: "1px solid rgba(34, 197, 94, 0.4)", padding: "10px", borderRadius: "8px", marginTop: "4px" }}>
           <div style={{ color: "#22c55e", fontSize: "10px", fontWeight: "900", marginBottom: "6px", textAlign: "center" }}>
@@ -145,7 +174,7 @@ function JoinedTournamentCard({ tournament }) {
         </div>
       ) : (
         <div style={{ background: "rgba(255,255,255,0.03)", padding: "8px", borderRadius: "8px", fontSize: "10px", textAlign: "center", color: "#9ca3af" }}>
-          🔒 Room ID & Password will be available 10 mins before match.
+          🔒 Room ID & Password will be available when admin publishes.
         </div>
       )}
     </div>

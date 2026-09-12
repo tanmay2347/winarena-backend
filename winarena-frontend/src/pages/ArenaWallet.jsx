@@ -45,9 +45,9 @@ export default function ArenaWallet() {
     const activatedStatus = localStorage.getItem("arenaWalletActivated") === "true";
     setIsActivated(activatedStatus);
 
-    const savedBalance = localStorage.getItem("walletBalance");
-    if (savedBalance) {
-      setBalance(parseFloat(savedBalance));
+    let savedBalance = parseFloat(localStorage.getItem("walletBalance"));
+    if (!isNaN(savedBalance)) {
+      setBalance(savedBalance);
     } else {
       localStorage.setItem("walletBalance", "0.00");
       setBalance(0.00);
@@ -64,11 +64,24 @@ export default function ArenaWallet() {
     setHistory(savedHistory);
   }, [navigate]);
 
-  // Handle ₹29 Activation Payment
+  // 🔴 FIXED: Handle ₹29 Activation Payment with Strict Balance Check
   const handleActivateWallet = () => {
+    let currentBalance = parseFloat(localStorage.getItem("walletBalance")) || 0;
+    const activationFee = 29;
+
+    if (currentBalance < activationFee) {
+      alert(`⚠️ Insufficient Balance!\n\nYou need ₹${activationFee} to activate Arena Wallet, but your balance is ₹${currentBalance.toFixed(2)}. Please add money to your wallet first.`);
+      return;
+    }
+
+    // Deduct ₹29 activation fee from balance
+    currentBalance -= activationFee;
+    setBalance(currentBalance);
+    localStorage.setItem("walletBalance", currentBalance.toFixed(2));
+
     localStorage.setItem("arenaWalletActivated", "true");
     setIsActivated(true);
-    alert("🎉 Arena Wallet Activated Successfully! Welcome to P2P Gaming.");
+    alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
   };
 
   // Camera Stream Effect when Scanner Modal is Open

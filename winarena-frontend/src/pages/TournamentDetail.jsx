@@ -6,17 +6,35 @@ export default function TournamentDetail() {
   const navigate = useNavigate();
   const [tournament, setTournament] = useState(null);
 
+  // 🟢 Live Backend URL Constant
+  const API_URL = "https://winarena-backend-1.onrender.com";
+
   useEffect(() => {
-    const allTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
-    const found = allTournaments.find((t) => t.id.toString() === id);
-    if (found) {
-      setTournament(found);
-    }
+    // Fetch live tournaments from MongoDB Backend
+    fetch(`${API_URL}/api/tournaments`)
+      .then((res) => res.json())
+      .then((data) => {
+        const allTournaments = Array.isArray(data) ? data : (data.tournaments || []);
+        const found = allTournaments.find((t) => (t._id || t.id).toString() === id);
+        if (found) {
+          setTournament(found);
+        } else {
+          // Fallback to local storage if not found on server
+          const localStored = JSON.parse(localStorage.getItem("adminTournaments")) || [];
+          const localFound = localStored.find((t) => t.id.toString() === id);
+          if (localFound) setTournament(localFound);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching tournament details:", err);
+        const localStored = JSON.parse(localStorage.getItem("adminTournaments")) || [];
+        const localFound = localStored.find((t) => t.id.toString() === id);
+        if (localFound) setTournament(localFound);
+      });
   }, [id]);
 
   const handleJoinConfirm = () => {
-    const allTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
-    const currentUserName = localStorage.getItem("userName") || "Gamer";
+    const currentUserName = localStorage.getItem("userName") || localStorage.getItem("userEmail") || "Gamer";
     
     // Strict Wallet Balance Check
     let walletBalance = parseFloat(localStorage.getItem("walletBalance"));
@@ -34,16 +52,14 @@ export default function TournamentDetail() {
       return;
     }
 
-    // 🔴 2. Already Joined Check in LocalJoined
-    const myJoined = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
-    const alreadyExists = myJoined.some((item) => item.id.toString() === id);
-
-    if (alreadyExists || (tournament.registeredUsers && tournament.registeredUsers.includes(currentUserName))) {
+    // 🔴 2. Already Joined Check
+    const registeredUsers = tournament.registeredUsers || [];
+    if (registeredUsers.includes(currentUserName)) {
       alert("⚠️ You have already joined this tournament!");
       return;
     }
 
-    if (tournament.registeredUsers && tournament.registeredUsers.length >= tournament.totalSlots) {
+    if (registeredUsers.length >= tournament.totalSlots) {
       alert("⚠️ Sorry, slots are full!");
       return;
     }
@@ -52,25 +68,20 @@ export default function TournamentDetail() {
     walletBalance -= entryFee;
     localStorage.setItem("walletBalance", walletBalance.toFixed(2));
 
-    let joinedTournamentData = null;
+    // Save joined tournament ID locally so 'Tournaments.jsx' can track it easily
+    const myJoinedIds = JSON.parse(localStorage.getItem("myJoinedTournamentIds")) || [];
+    const tournamentId = tournament._id || tournament.id;
+    if (!myJoinedIds.includes(tournamentId)) {
+      myJoinedIds.push(tournamentId);
+      localStorage.setItem("myJoinedTournamentIds", JSON.stringify(myJoinedIds));
+    }
 
-    const updatedTournaments = allTournaments.map((t) => {
-      if (t.id.toString() === id) {
-        if (!t.registeredUsers) {
-          t.registeredUsers = [];
-        }
-        t.registeredUsers.push(currentUserName);
-        joinedTournamentData = t;
-      }
-      return t;
-    });
-
-    if (!joinedTournamentData) return;
-
-    localStorage.setItem("adminTournaments", JSON.stringify(updatedTournaments));
-
-    myJoined.push(joinedTournamentData);
-    localStorage.setItem("myJoinedTournaments", JSON.stringify(myJoined));
+    // Also support legacy local storage array
+    const myJoined = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
+    if (!myJoined.some((item) => (item._id || item.id).toString() === id)) {
+      myJoined.push(tournament);
+      localStorage.setItem("myJoinedTournaments", JSON.stringify(myJoined));
+    }
 
     alert(`🎉 Successfully Registered!\n\n₹${entryFee} has been deducted from your wallet. Good luck! 🚀`);
     navigate("/tournaments");
@@ -78,8 +89,8 @@ export default function TournamentDetail() {
 
   if (!tournament) {
     return (
-      <div style={{ padding: "20px", color: "#fff", background: "#0f172a", minHeight: "100vh", textAlign: "center" }}>
-        <h2>Tournament not found!</h2>
+      <div style={{ padding: "20px", color: "#fff", background: "#0f172a", minHeight: "100vh", textAlign: "center", paddingTop: "100px" }}>
+        <h2>Tournament not found or loading...</h2>
         <button onClick={() => navigate(-1)} style={{ background: "#7c3aed", color: "#fff", border: "none", padding: "8px 14px", borderRadius: "6px", marginTop: "10px", cursor: "pointer" }}>← Back</button>
       </div>
     );
