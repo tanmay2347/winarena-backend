@@ -10,6 +10,7 @@ export default function ArenaWallet() {
   
   // 🟢 Activation State (₹29 Lock Condition)
   const [isActivated, setIsActivated] = useState(false);
+  const [lockAmount] = useState(29); // 🔒 Fixed ₹29 Minimum Lock Reserve
 
   // Modals States
   const [showQrModal, setShowQrModal] = useState(false);
@@ -65,7 +66,6 @@ export default function ArenaWallet() {
 
   // Handle ₹29 Activation Payment
   const handleActivateWallet = () => {
-    // Simulate successful payment of ₹29 for activation
     localStorage.setItem("arenaWalletActivated", "true");
     setIsActivated(true);
     alert("🎉 Arena Wallet Activated Successfully! Welcome to P2P Gaming.");
@@ -105,6 +105,7 @@ export default function ArenaWallet() {
     setScanTargetUser(detectedUser);
   };
 
+  // 🔒 Scan & Pay with ₹29 Lock Validation Check
   const handleExecuteScanTransfer = (e) => {
     e.preventDefault();
     const trAmt = parseFloat(scanAmount);
@@ -112,8 +113,11 @@ export default function ArenaWallet() {
       alert("Please enter valid amount to transfer!");
       return;
     }
-    if (trAmt > balance) {
-      alert("Insufficient balance!");
+
+    // Usable balance after keeping ₹29 locked
+    const usableBalance = balance - lockAmount;
+    if (trAmt > usableBalance) {
+      alert(`⚠️ Transaction Failed!\n\nYou must maintain a minimum locked balance of ₹${lockAmount}. Your usable balance is ₹${Math.max(0, usableBalance)}.`);
       return;
     }
 
@@ -173,6 +177,7 @@ export default function ArenaWallet() {
     alert(`Successfully added ₹${amt}!\nTxn ID: ${uniqueTxnId}`);
   };
 
+  // 🔒 Withdraw with ₹29 Lock Validation Check
   const handleWithdraw = (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
@@ -181,8 +186,11 @@ export default function ArenaWallet() {
       alert("Please enter a valid amount!");
       return;
     }
-    if (amt > balance) {
-      alert("Insufficient wallet balance!");
+
+    // Usable balance check with ₹29 lock
+    const usableBalance = balance - lockAmount;
+    if (amt > usableBalance) {
+      alert(`⚠️ Withdrawal Failed!\n\nYou must maintain a minimum locked balance of ₹${lockAmount}. Your usable balance is ₹${Math.max(0, usableBalance)}.`);
       return;
     }
 
@@ -285,6 +293,9 @@ export default function ArenaWallet() {
       <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #311042 100%)", borderRadius: "16px", border: "1px solid rgba(251,191,36,0.3)", padding: "24px 20px", marginBottom: "20px", textAlign: "center" }}>
         <span style={{ fontSize: "10px", color: "#fbbf24", fontWeight: "800", letterSpacing: "1px", display: "block", marginBottom: "4px" }}>WIN ARENA DIGITAL WALLET (ACTIVATED ✓)</span>
         <h2 style={{ fontSize: "36px", color: "#fff", margin: "0 0 4px 0", fontWeight: "900" }}>₹{balance.toFixed(2)}</h2>
+        <div style={{ fontSize: "11px", color: "#fbbf24", background: "rgba(251, 191, 36, 0.1)", padding: "4px 10px", borderRadius: "8px", display: "inline-block", marginBottom: "12px" }}>
+          🔒 Locked Minimum Reserve: ₹{lockAmount}
+        </div>
         <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 16px 0" }}>Fast, secure P2P transfers & tournament payouts</p>
         
         <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
@@ -521,7 +532,7 @@ export default function ArenaWallet() {
         </div>
       )}
 
-      {/* CUSTOM PHONEPE STYLE BOTTOM NAV */}
+      {/* CUSTOM BOTTOM NAV */}
       <nav style={{
         position: "fixed",
         bottom: 0,

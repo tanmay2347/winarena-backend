@@ -18,15 +18,39 @@ export default function TournamentDetail() {
     const allTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
     const currentUserName = localStorage.getItem("userName") || "Gamer";
     
-    // Wallet balance check
-    let walletBalance = parseFloat(localStorage.getItem("walletBalance")) || 0;
+    // Strict Wallet Balance Check
+    let walletBalance = parseFloat(localStorage.getItem("walletBalance"));
+    if (isNaN(walletBalance)) {
+      walletBalance = 0;
+      localStorage.setItem("walletBalance", "0");
+    }
+
     const entryFee = parseFloat(tournament.entry) || 0;
 
+    // 🔴 1. Insufficient Balance Protection
     if (walletBalance < entryFee) {
-      alert(`Insufficient balance! You need ₹${entryFee} to join this tournament. Please add money to your wallet.`);
+      alert(`⚠️ Insufficient Balance!\n\nYou need ₹${entryFee} to join this tournament, but your wallet has ₹${walletBalance}. Please add money.`);
       navigate("/wallet");
       return;
     }
+
+    // 🔴 2. Already Joined Check in LocalJoined
+    const myJoined = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
+    const alreadyExists = myJoined.some((item) => item.id.toString() === id);
+
+    if (alreadyExists || (tournament.registeredUsers && tournament.registeredUsers.includes(currentUserName))) {
+      alert("⚠️ You have already joined this tournament!");
+      return;
+    }
+
+    if (tournament.registeredUsers && tournament.registeredUsers.length >= tournament.totalSlots) {
+      alert("⚠️ Sorry, slots are full!");
+      return;
+    }
+
+    // Deduct entry fee safely BEFORE saving
+    walletBalance -= entryFee;
+    localStorage.setItem("walletBalance", walletBalance.toFixed(2));
 
     let joinedTournamentData = null;
 
@@ -35,18 +59,6 @@ export default function TournamentDetail() {
         if (!t.registeredUsers) {
           t.registeredUsers = [];
         }
-
-        // 🔴 Duplicate Join Check
-        if (t.registeredUsers.includes(currentUserName)) {
-          alert("You have already joined this tournament!");
-          return t;
-        }
-
-        if (t.registeredUsers.length >= t.totalSlots) {
-          alert("Sorry, slots are full!");
-          return t;
-        }
-
         t.registeredUsers.push(currentUserName);
         joinedTournamentData = t;
       }
@@ -55,25 +67,12 @@ export default function TournamentDetail() {
 
     if (!joinedTournamentData) return;
 
-    // Check again before deducting balance if already joined via loop condition
-    const myJoined = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
-    const alreadyExists = myJoined.some((item) => item.id.toString() === id);
-
-    if (alreadyExists) {
-      alert("You have already joined this tournament!");
-      return;
-    }
-
-    // Deduct entry fee from wallet
-    walletBalance -= entryFee;
-    localStorage.setItem("walletBalance", walletBalance.toFixed(2));
-
     localStorage.setItem("adminTournaments", JSON.stringify(updatedTournaments));
 
     myJoined.push(joinedTournamentData);
     localStorage.setItem("myJoinedTournaments", JSON.stringify(myJoined));
 
-    alert(`Successfully Registered for the Tournament! ₹${entryFee} deducted from wallet. 🚀`);
+    alert(`🎉 Successfully Registered!\n\n₹${entryFee} has been deducted from your wallet. Good luck! 🚀`);
     navigate("/tournaments");
   };
 
