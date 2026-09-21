@@ -8,8 +8,8 @@ export default function Tournaments() {
   // 🟢 Live Backend URL Constant
   const API_URL = "https://winarena-backend-1.onrender.com";
 
-  useEffect(() => {
-    // 🟢 Fetch Tournaments from Backend MongoDB Database & filter joined ones
+  // Function to fetch and filter joined tournaments
+  const fetchJoinedTournaments = () => {
     fetch(`${API_URL}/api/tournaments`)
       .then((res) => res.json())
       .then((data) => {
@@ -39,6 +39,15 @@ export default function Tournaments() {
           setJoinedTournaments(JSON.parse(data));
         }
       });
+  };
+
+  useEffect(() => {
+    // Initial fetch
+    fetchJoinedTournaments();
+
+    // 🟢 Auto-refresh every 5 seconds to get live Room ID & Password automatically
+    const interval = setInterval(fetchJoinedTournaments, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
