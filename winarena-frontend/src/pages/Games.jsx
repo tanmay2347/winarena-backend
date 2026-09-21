@@ -7,10 +7,10 @@ export default function Games() {
   const [selectedGame, setSelectedGame] = useState("");
 
   // Game click handler
-  const handleGameClick = (gameName) => {
+ const handleGameClick = (gameName) => {
     const formatted = gameName.toLowerCase().replace(/\s+/g, "");
     
-    // Agar Free Fire hai toh page par bhej do
+    // Agar Free Fire hai toh GameDetail page par bhej do jahan game-specific tournaments show honge
     if (formatted.includes("freefire")) {
       navigate(`/games/freefire`);
     } else {

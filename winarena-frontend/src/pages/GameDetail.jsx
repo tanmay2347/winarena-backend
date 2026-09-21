@@ -7,14 +7,48 @@ export default function GameDetail() {
   const [tournaments, setTournaments] = useState([]);
   const [timeLeft, setTimeLeft] = useState({});
 
+  // 🟢 Live Backend URL Constant
+  const API_URL = "https://winarena-backend-1.onrender.com";
+
+  // Fetch Tournaments from Backend MongoDB Database
+  const fetchGameTournaments = () => {
+    fetch(`${API_URL}/api/tournaments`)
+      .then((res) => res.json())
+      .then((data) => {
+        const allTournaments = Array.isArray(data) ? data : (data.tournaments || []);
+        
+        // Sirf is game ke tournaments filter karein (e.g. Free Fire)
+        const filtered = allTournaments.filter(
+          (t) => t.game && t.game.toLowerCase().replace(/\s+/g, "") === (gameName || "").toLowerCase().replace(/\s+/g, "")
+        );
+
+        if (filtered.length === 0) {
+          // Fallback to localStorage if backend is empty
+          const localTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
+          const localFiltered = localTournaments.filter(
+            (t) => t.game && t.game.toLowerCase().replace(/\s+/g, "") === (gameName || "").toLowerCase().replace(/\s+/g, "")
+          );
+          setTournaments(localFiltered);
+        } else {
+          setTournaments(filtered);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching tournaments from backend:", err);
+        // Fallback local storage
+        const localTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
+        const localFiltered = localTournaments.filter(
+          (t) => t.game && t.game.toLowerCase().replace(/\s+/g, "") === (gameName || "").toLowerCase().replace(/\s+/g, "")
+        );
+        setTournaments(localFiltered);
+      });
+  };
+
   useEffect(() => {
-    // Admin tournaments fetch karein
-    const allTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
-    // Sirf is game ke tournaments filter karein (e.g. Free Fire)
-    const filtered = allTournaments.filter(
-      (t) => t.game.toLowerCase().replace(/\s+/g, "") === gameName.toLowerCase().replace(/\s+/g, "")
-    );
-    setTournaments(filtered);
+    fetchGameTournaments();
+    // Auto-refresh every 5 seconds to get live updates
+    const interval = setInterval(fetchGameTournaments, 5000);
+    return () => clearInterval(interval);
   }, [gameName]);
 
   // Live Countdown Timer logic
@@ -23,14 +57,17 @@ export default function GameDetail() {
       const now = Date.now();
       const updatedTimes = {};
       tournaments.forEach((t) => {
-        const diff = t.startTime - now;
+        const tId = t._id || t.id;
+        const startTimeMs = new Date(t.startTime).getTime() || t.startTime;
+        const diff = startTimeMs - now;
+        
         if (diff <= 0) {
-          updatedTimes[t.id] = "MATCH STARTED";
+          updatedTimes[tId] = "MATCH STARTED";
         } else {
           const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
           const minutes = Math.floor((diff / 1000 / 60) % 60);
           const seconds = Math.floor((diff / 1000) % 60);
-          updatedTimes[t.id] = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+          updatedTimes[tId] = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }
       });
       setTimeLeft(updatedTimes);
@@ -75,13 +112,15 @@ export default function GameDetail() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {tournaments.map((tournament) => {
+            const tournamentId = tournament._id || tournament.id;
             const registeredCount = tournament.registeredUsers?.length || 0;
-            const isFull = registeredCount >= tournament.totalSlots;
-            const timerText = timeLeft[tournament.id] || "Loading...";
+            const maxSlots = tournament.slots || tournament.totalSlots || 10;
+            const isFull = registeredCount >= maxSlots;
+            const timerText = timeLeft[tournamentId] || "Loading...";
 
             return (
               <div 
-                key={tournament.id}
+                key={tournamentId}
                 style={{ 
                   background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", 
                   borderRadius: "16px", 
@@ -103,7 +142,7 @@ export default function GameDetail() {
                 {/* SLOTS & TIMER */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", fontSize: "12px" }}>
                   <span style={{ color: "#9ca3af" }}>
-                    Slots: <strong style={{ color: "#fff" }}>{registeredCount} / {tournament.totalSlots}</strong>
+                    Slots: <strong style={{ color: "#fff" }}>{registeredCount} / {maxSlots}</strong>
                   </span>
                   <div style={{ background: "rgba(255, 255, 255, 0.08)", padding: "4px 10px", borderRadius: "6px", color: "#fbbf24", fontWeight: "800", fontSize: "11px" }}>
                     ⏳ Starts in: {timerText}
@@ -125,7 +164,7 @@ export default function GameDetail() {
                 {/* JOIN NOW BUTTON */}
                 <button 
                   disabled={isFull}
-                  onClick={() => navigate(`/tournament/${tournament.id}`)}
+                  onClick={() => navigate(`/tournament/${tournamentId}`)}
                   style={{ 
                     background: isFull ? "#4b5563" : "#7c3aed", 
                     color: "#fff", 
