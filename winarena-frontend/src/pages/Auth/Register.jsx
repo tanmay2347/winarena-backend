@@ -10,9 +10,6 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // =========================================
-  // CREATE ACCOUNT
-  // =========================================
   const handleRegister = (e) => {
     e.preventDefault();
 
@@ -31,29 +28,35 @@ export default function Register() {
       return;
     }
 
-    // =========================================
-    // SAVE USER
-    // =========================================
+    // 🟢 FIXED: Save into registeredUsers database array for Login matching
+    const userData = { name, email, mobile, password };
+    const existingUsers = JSON.parse(localStorage.getItem("registeredUsers")) || [];
+    
+    // Check if email already exists
+    const userExists = existingUsers.some((u) => u.email === email);
+    if (userExists) {
+      alert("Email already registered! Please login.");
+      navigate("/login");
+      return;
+    }
+
+    existingUsers.push(userData);
+    localStorage.setItem("registeredUsers", JSON.stringify(existingUsers));
+
+    // Save active session & profile details
     localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("user", JSON.stringify(userData));
     localStorage.setItem("userName", name);
     localStorage.setItem("userEmail", email);
     localStorage.setItem("userMobile", mobile);
 
-    // =========================================
-    // GO TO HOME
-    // =========================================
+    alert("Account created successfully! 🚀");
     navigate("/");
   };
 
   return (
     <div className="login-page">
-
-      {/* =========================================
-          REGISTER CARD
-      ========================================= */}
       <div className="login-card">
-
-        {/* LOGO IMAGE FROM PUBLIC FOLDER */}
         <div className="login-logo" style={{ textAlign: "center", marginBottom: "16px" }}>
           <img 
             src="/logo.png" 
@@ -62,22 +65,14 @@ export default function Register() {
           />
         </div>
 
-        {/* TITLE */}
         <h1>Create Account</h1>
-
         <p className="login-subtitle">
           Join WinArena and start your gaming journey
         </p>
 
-        {/* =========================================
-            REGISTER FORM
-        ========================================= */}
         <form onSubmit={handleRegister}>
-
-          {/* FULL NAME */}
           <div className="input-group">
             <label>Full Name</label>
-
             <input
               type="text"
               placeholder="Enter your full name"
@@ -86,10 +81,8 @@ export default function Register() {
             />
           </div>
 
-          {/* EMAIL */}
           <div className="input-group">
             <label>Email Address</label>
-
             <input
               type="email"
               placeholder="Enter your email"
@@ -98,10 +91,8 @@ export default function Register() {
             />
           </div>
 
-          {/* MOBILE */}
           <div className="input-group">
             <label>Mobile Number</label>
-
             <input
               type="tel"
               placeholder="Enter 10 digit mobile number"
@@ -114,10 +105,8 @@ export default function Register() {
             />
           </div>
 
-          {/* PASSWORD */}
           <div className="input-group">
             <label>Password</label>
-
             <input
               type="password"
               placeholder="Create password"
@@ -126,10 +115,8 @@ export default function Register() {
             />
           </div>
 
-          {/* CONFIRM PASSWORD */}
           <div className="input-group">
             <label>Confirm Password</label>
-
             <input
               type="password"
               placeholder="Confirm password"
@@ -138,31 +125,16 @@ export default function Register() {
             />
           </div>
 
-          {/* CREATE ACCOUNT BUTTON */}
-          <button
-            type="submit"
-            className="login-button"
-          >
+          <button type="submit" className="login-button">
             CREATE ACCOUNT
           </button>
-
         </form>
 
-        {/* =========================================
-            LOGIN LINK
-        ========================================= */}
         <div className="create-account">
-
           <span>Already have an account?</span>
-
-          <Link to="/login">
-            Login
-          </Link>
-
+          <Link to="/login">Login</Link>
         </div>
-
       </div>
-
     </div>
   );
-} 
+}

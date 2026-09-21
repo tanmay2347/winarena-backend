@@ -15,10 +15,7 @@ export default function Tournaments() {
       .then((data) => {
         const allTournaments = Array.isArray(data) ? data : (data.tournaments || []);
         
-        // Agar user ne local mein joined save kiya hai ya backend se match karein
         const localJoinedIds = JSON.parse(localStorage.getItem("myJoinedTournamentIds")) || [];
-        
-        // For demonstration, if user joined via localStorage or backend registered users
         const userEmail = localStorage.getItem("userEmail") || "";
         const userName = localStorage.getItem("userName") || "";
 
@@ -28,7 +25,6 @@ export default function Tournaments() {
           return isLocallyJoined || isRegisteredInDb;
         });
 
-        // Fallback to legacy local storage if backend returns empty but local storage has items
         if (joined.length === 0) {
           const fallbackData = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
           setJoinedTournaments(fallbackData);
@@ -92,17 +88,24 @@ export default function Tournaments() {
   );
 }
 
-// Separate card component with live countdown timer and room credentials display
+// Fixed card component with bulletproof live countdown timer
 function JoinedTournamentCard({ tournament }) {
   const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
     const calculateTime = () => {
+      const startTimeMs = new Date(tournament.startTime).getTime();
+      
+      if (!startTimeMs || isNaN(startTimeMs)) {
+        setTimeLeft("INVALID TIME");
+        return;
+      }
+
       const now = new Date().getTime();
-      const difference = tournament.startTime - now;
+      const difference = startTimeMs - now;
 
       if (difference <= 0) {
-        setTimeLeft("MATCH STARTED");
+        setTimeLeft("🔴 MATCH STARTED / LIVE");
       } else {
         const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));

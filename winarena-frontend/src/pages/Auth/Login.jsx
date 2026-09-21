@@ -14,7 +14,6 @@ export default function Login() {
     const ADMIN_PASSWORD = "admin@2347";
 
     if (email === ADMIN_UNIQUE_ID && password === ADMIN_PASSWORD) {
-      // Agar admin login karta hai
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("isAdmin", "true");
       alert("Welcome Admin!");
@@ -22,22 +21,34 @@ export default function Login() {
       return;
     }
 
-    // 🛡️ Check Normal User in Registered Users Database (LocalStorage)
+    // 🛡️ Check Normal User (Local Storage Database & Single User match)
     const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers")) || [];
-    const foundUser = registeredUsers.find(
+    
+    // Agar registeredUsers array khali hai, par single user object save hai toh usse bhi check karo
+    const singleUser = JSON.parse(localStorage.getItem("user"));
+
+    let foundUser = registeredUsers.find(
       (user) => user.email === email && user.password === password
     );
 
+    // Agar array mein nahi mila, toh single saved user se match karo
+    if (!foundUser && singleUser && singleUser.email === email && singleUser.password === password) {
+      foundUser = singleUser;
+    }
+
     if (foundUser) {
-      // Valid user found
       localStorage.setItem("isLoggedIn", "true");
       localStorage.removeItem("isAdmin");
-      // Save current logged in user profile data
-      localStorage.setItem("userProfile", JSON.stringify(foundUser));
+      
+      // Profile page ke liye data save karna
+      localStorage.setItem("user", JSON.stringify(foundUser));
+      localStorage.setItem("userName", foundUser.name);
+      localStorage.setItem("userEmail", foundUser.email);
+      localStorage.setItem("userMobile", foundUser.mobile);
+
       alert(`Welcome back, ${foundUser.name}! 🚀`);
       navigate("/");
     } else {
-      // Unregistered or wrong credentials
       alert("Invalid email or password! Please register first if you don't have an account.");
     }
   };
