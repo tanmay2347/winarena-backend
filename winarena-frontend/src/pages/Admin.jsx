@@ -87,9 +87,9 @@ export default function Admin() {
     const newTournament = {
       game,
       mode,
-      entry,
-      prize,
-      totalSlots: parseInt(totalSlots) || 10,
+      entry: Number(entry),
+      prize: Number(prize),
+      slots: parseInt(totalSlots) || 10,
       registeredUsers: [],
       roomId: "",
       roomPass: "",
@@ -122,7 +122,7 @@ export default function Admin() {
     }
   };
 
-  // 🟢 Publish Room Credentials via Backend API
+  // 🟢 Publish Room Credentials via Backend API (Fixed to use PUT /api/tournaments/:id)
   const handlePublishRoom = async (id) => {
     const { roomId, roomPass } = roomData[id] || {};
     if (!roomId || !roomPass) {
@@ -131,15 +131,15 @@ export default function Admin() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/tournaments/room`, {
-        method: "POST",
+      const res = await fetch(`${API_URL}/api/tournaments/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tournamentId: id, roomId, roomPass })
+        body: JSON.stringify({ roomId, roomPass })
       });
       const data = await res.json();
 
       if (res.ok || data.success) {
-        alert("Room ID & Password Published Successfully to Database! 🚀");
+        alert("Room ID & Password Published Successfully! 🚀");
         fetchTournaments();
       } else {
         alert(data.message || "Failed to publish room details");
@@ -267,11 +267,11 @@ export default function Admin() {
                     
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                       <h4 style={{ margin: 0, fontSize: "13px", color: "#fff" }}>{t.game} - {t.mode}</h4>
-                      <span style={{ fontSize: "10px", color: "#9ca3af" }}>Slots: {t.registeredUsers?.length || 0}/{t.totalSlots}</span>
+                      <span style={{ fontSize: "10px", color: "#9ca3af" }}>Slots: {t.registeredUsers?.length || 0}/{t.slots || t.totalSlots}</span>
                     </div>
 
                     <div style={{ background: "rgba(251, 191, 36, 0.15)", color: "#fbbf24", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "800", display: "inline-block", marginBottom: "10px" }}>
-                      📅 Match Time: {new Date(t.startTime).toLocaleString()}
+                      📅 Match Time: {new Date(Number(t.startTime) || t.startTime).toLocaleString()}
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>
