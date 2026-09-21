@@ -34,7 +34,11 @@ mongoose.connect(MONGO_URI)
     console.error('❌ MongoDB connection error:', err);
   });
 
-// Admin Earnings Schema & Model with Status and Details field
+// ==========================================
+// 1. SCHEMAS & MODELS
+// ==========================================
+
+// Admin Earnings Schema & Model
 const adminEarningsSchema = new mongoose.Schema({
     userId: String,
     userEmail: String,
@@ -46,13 +50,107 @@ const adminEarningsSchema = new mongoose.Schema({
     status: { type: String, default: "Pending" },
     timestamp: { type: Date, default: Date.now }
 });
-
 const AdminEarning = mongoose.model('AdminEarning', adminEarningsSchema);
 
-// Routes
+// Tournament Schema & Model (Tournament Create & Live karne ke liye)
+const tournamentSchema = new mongoose.Schema({
+    game: { type: String, required: true },
+    mode: { type: String, required: true },
+    entry: { type: Number, required: true },
+    prize: { type: Number, required: true },
+    slots: { type: Number, required: true },
+    startTime: { type: String, required: true },
+    roomId: { type: String, default: "" },      // Jab tak live na ho, empty rahega
+    roomPass: { type: String, default: "" },   // Jab tak live na ho, empty rahega
+    registeredUsers: { type: Array, default: [] },
+    timestamp: { type: Date, default: Date.now }
+});
+const Tournament = mongoose.model('Tournament', tournamentSchema);
+
+
+// ==========================================
+// 2. ROUTES
+// ==========================================
+
 app.get('/', (req, res) => {
   res.send('Win Arena Backend API is active!');
 });
+
+
+// ---------------- TOURNAMENT APIs ----------------
+
+// Get All Tournaments
+app.get('/api/tournaments', async (req, res) => {
+    try {
+        const tournaments = await Tournament.find().sort({ timestamp: -1 });
+        res.json({ success: true, tournaments });
+    } catch (err) {
+        console.error("Fetch tournaments error:", err);
+        res.status(500).json({ success: false, message: "Server error while fetching tournaments" });
+    }
+});
+
+// Create Tournament API (Admin panel ke totalSlots aur baaki fields ke sath match kiya gaya)
+app.post('/api/tournaments', async (req, res) => {
+    try {
+        const { game, mode, entry, prize, totalSlots, slots, startTime } = req.body;
+        
+        const newTournament = new Tournament({
+            game,
+            mode,
+            entry,
+            prize,
+            slots: totalSlots || slots || 10,
+            startTime,
+            roomId: "",
+            roomPass: ""
+        });
+
+        await newTournament.save();
+        res.status(201).json({ success: true, message: "Tournament created successfully!", tournament: newTournament });
+    } catch (err) {
+        console.error("Error creating tournament:", err);
+        res.status(500).json({ success: false, message: "Server error while creating tournament" });
+    }
+});
+
+// Update / Publish Room Credentials API (Admin panel ke /api/tournaments/room route ke sath match kiya gaya)
+app.post('/api/tournaments/room', async (req, res) => {
+    try {
+        const { tournamentId, roomId, roomPass } = req.body;
+        const updated = await Tournament.findByIdAndUpdate(
+            tournamentId,
+            { roomId, roomPass },
+            { new: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ success: false, message: "Tournament not found" });
+        }
+
+        res.json({ success: true, message: "Room details published successfully!", updated });
+    } catch (err) {
+        console.error("Publish room error:", err);
+        res.status(500).json({ success: false, message: "Server error while publishing room details" });
+    }
+});
+
+// Delete Tournament API
+app.delete('/api/tournaments/:id', async (req, res) => {
+    try {
+        const deleted = await Tournament.findByIdAndDelete(req.params.id);
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: "Tournament not found" });
+        }
+        res.json({ success: true, message: "Tournament deleted successfully!" });
+    } catch (err) {
+        console.error("Delete tournament error:", err);
+        res.status(500).json({ success: false, message: "Server error during deletion" });
+    }
+});
+
+
+// ---------------- PAYMENT & WITHDRAWAL APIs ----------------
 
 // 1. Create Razorpay Order API
 app.post('/api/create-order', async (req, res) => {
