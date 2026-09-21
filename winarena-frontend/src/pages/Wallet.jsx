@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 export default function Wallet() {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
-  const [totalWithdrawn, setTotalWithdrawn] = useState(0); // 🟢 Dynamic Total Withdrawn State
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [activeTab, setActiveTab] = useState("add"); 
   const [amount, setAmount] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("UPI");
@@ -15,10 +15,18 @@ export default function Wallet() {
   const [hasArenaAccount, setHasArenaAccount] = useState(false);
 
   const [popupData, setPopupData] = useState(null);
-  const userEmail = "user@winarena.com";
+  const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
   const API_URL = "https://winarena-backend-1.onrender.com";
 
   useEffect(() => {
+    // 🟢 Bulletproof dynamic Razorpay SDK loader for APK & Web
+    if (!window.Razorpay) {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
 
@@ -28,7 +36,6 @@ export default function Wallet() {
       return;
     }
 
-    // 🟢 Wallet Balance (Default 0 for new user)
     const savedBalance = localStorage.getItem("walletBalance");
     if (savedBalance !== null) {
       setBalance(parseFloat(savedBalance));
@@ -37,7 +44,6 @@ export default function Wallet() {
       setBalance(0.00);
     }
 
-    // 🟢 Calculate Total Withdrawn dynamically from actual wallet history
     const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
     let withdrawnSum = 0;
     history.forEach(item => {
@@ -100,30 +106,46 @@ export default function Wallet() {
         return;
       }
 
+      if (!window.Razorpay) {
+        alert("Razorpay SDK is loading. Please try again in 2 seconds.");
+        return;
+      }
+
       const options = {
-        key: "rzp_test_TZydNSxzH1KSjl",
+        key: "rzp_test_TZydNSxzH1KSjl", // Apni live ya test key yahan rakhein
         amount: data.order.amount,
         currency: "INR",
         name: "Win Arena",
         description: "Wallet Deposit via Gateway",
         order_id: data.order.id,
-        handler: function (response) {
-          completeDeposit("Razorpay", response.razorpay_payment_id);
+        handler: async function (response) {
+          try {
+            const verifyRes = await fetch(`${API_URL}/api/verify-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(response)
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              completeDeposit("Razorpay", response.razorpay_payment_id);
+            } else {
+              alert("Payment verification failed!");
+            }
+          } catch (err) {
+            console.error("Verification error:", err);
+            completeDeposit("Razorpay", response.razorpay_payment_id);
+          }
         },
         prefill: {
-          name: "WinArena User",
+          name: localStorage.getItem("userName") || "WinArena User",
           email: userEmail,
           contact: "8857824607"
         },
         theme: { color: "#7c3aed" }
       };
 
-      if (window.Razorpay) {
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      } else {
-        alert("Razorpay SDK not loaded.");
-      }
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (err) {
       console.error("Payment error:", err);
       alert("Network error during payment initialization.");
@@ -273,7 +295,6 @@ export default function Wallet() {
         </div>
         <div style={{ textAlign: "right" }}>
           <span style={{ fontSize: "10px", color: "#9ca3af", display: "block", fontWeight: "800" }}>TOTAL WITHDRAWN</span>
-          {/* 🟢 Dynamic Total Withdrawn display */}
           <strong style={{ fontSize: "14px", color: "#22c55e", fontWeight: "800" }}>₹{totalWithdrawn.toFixed(2)}</strong>
         </div>
       </div>
@@ -384,4 +405,4 @@ export default function Wallet() {
 
 const inputStyle = {
   width: "100%", padding: "10px", borderRadius: "8px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "12px", boxSizing: "border-box"
-};2575
+};
