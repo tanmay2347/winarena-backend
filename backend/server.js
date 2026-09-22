@@ -38,7 +38,6 @@ mongoose.connect(MONGO_URI)
 // 1. SCHEMAS & MODELS
 // ==========================================
 
-// User Schema & Model (P2P Transfer ke liye walletBalance aur mobile zaroori hai)
 const userSchema = new mongoose.Schema({
     name: String,
     email: { type: String, unique: true },
@@ -48,7 +47,6 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// Admin Earnings Schema & Model
 const adminEarningsSchema = new mongoose.Schema({
     userId: String,
     userEmail: String,
@@ -56,13 +54,12 @@ const adminEarningsSchema = new mongoose.Schema({
     commissionAmount: Number,
     finalPayout: Number,
     method: String,
-    details: Object, // User ki UPI / Bank details store karne ke liye
+    details: Object,
     status: { type: String, default: "Pending" },
     timestamp: { type: Date, default: Date.now }
 });
 const AdminEarning = mongoose.model('AdminEarning', adminEarningsSchema);
 
-// Tournament Schema & Model (Tournament Create & Live karne ke liye)
 const tournamentSchema = new mongoose.Schema({
     game: { type: String, required: true },
     mode: { type: String, required: true },
@@ -70,8 +67,8 @@ const tournamentSchema = new mongoose.Schema({
     prize: { type: Number, required: true },
     slots: { type: Number, required: true },
     startTime: { type: String, required: true },
-    roomId: { type: String, default: "" },      // Jab tak live na ho, empty rahega
-    roomPass: { type: String, default: "" },   // Jab tak live na ho, empty rahega
+    roomId: { type: String, default: "" },
+    roomPass: { type: String, default: "" },
     registeredUsers: { type: Array, default: [] },
     timestamp: { type: Date, default: Date.now }
 });
@@ -89,7 +86,6 @@ app.get('/', (req, res) => {
 
 // ---------------- TOURNAMENT APIs ----------------
 
-// Get All Tournaments
 app.get('/api/tournaments', async (req, res) => {
     try {
         const tournaments = await Tournament.find().sort({ timestamp: -1 });
@@ -100,7 +96,6 @@ app.get('/api/tournaments', async (req, res) => {
     }
 });
 
-// Create Tournament API
 app.post('/api/tournaments', async (req, res) => {
     try {
         const { game, mode, entry, prize, totalSlots, slots, startTime } = req.body;
@@ -124,7 +119,6 @@ app.post('/api/tournaments', async (req, res) => {
     }
 });
 
-// Update / Publish Room Credentials API
 app.post('/api/tournaments/room', async (req, res) => {
     try {
         const { tournamentId, roomId, roomPass } = req.body;
@@ -145,7 +139,6 @@ app.post('/api/tournaments/room', async (req, res) => {
     }
 });
 
-// Delete Tournament API
 app.delete('/api/tournaments/:id', async (req, res) => {
     try {
         const deleted = await Tournament.findByIdAndDelete(req.params.id);
@@ -160,7 +153,7 @@ app.delete('/api/tournaments/:id', async (req, res) => {
 });
 
 
-// ---------------- P2P WALLET TRANSFER API (Sender & Recipient Both Auto-Sync) ----------------
+// ---------------- P2P WALLET TRANSFER API (Fully Fixed with .save()) ----------------
 app.post('/api/transfer', async (req, res) => {
     try {
         const { senderEmail, recipientMobile, amount } = req.body;
@@ -170,7 +163,7 @@ app.post('/api/transfer', async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid transfer amount!" });
         }
 
-        // 1. Sender dhoondein, agar na mile toh auto-create karein
+        // 1. Sender dhoondein, agar na mile toh auto-create karke save karein
         let sender = await User.findOne({ email: senderEmail });
         if (!sender) {
             sender = new User({
@@ -179,9 +172,10 @@ app.post('/api/transfer', async (req, res) => {
                 mobile: "8857824607",
                 walletBalance: 1000
             });
+            await sender.save();
         }
 
-        // 2. Recipient dhoondein, agar na mile toh auto-create karein
+        // 2. Recipient dhoondein, agar na mile toh auto-create karke save karein
         let recipient = await User.findOne({ mobile: recipientMobile });
         if (!recipient) {
             recipient = new User({
@@ -190,6 +184,7 @@ app.post('/api/transfer', async (req, res) => {
                 mobile: recipientMobile || "9876543210",
                 walletBalance: 500
             });
+            await recipient.save();
         }
 
         if (sender.walletBalance < trAmount) {
@@ -218,7 +213,6 @@ app.post('/api/transfer', async (req, res) => {
 
 // ---------------- PAYMENT & WITHDRAWAL APIs ----------------
 
-// 1. Create Razorpay Order API
 app.post('/api/create-order', async (req, res) => {
     try {
         const { amount } = req.body;
@@ -240,7 +234,6 @@ app.post('/api/create-order', async (req, res) => {
     }
 });
 
-// 2. Verify Payment API
 app.post('/api/verify-payment', async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -261,7 +254,6 @@ app.post('/api/verify-payment', async (req, res) => {
     }
 });
 
-// 3. Withdrawal API with 2.5% Commission and User Details
 app.post('/api/withdraw', async (req, res) => {
     try {
         const { userId, userEmail, amount, method, details } = req.body;
@@ -297,7 +289,6 @@ app.post('/api/withdraw', async (req, res) => {
     }
 });
 
-// 4. Admin API to Get All Withdrawal Requests
 app.get('/api/admin/withdrawals', async (req, res) => {
     try {
         const withdrawals = await AdminEarning.find().sort({ timestamp: -1 });
@@ -308,7 +299,6 @@ app.get('/api/admin/withdrawals', async (req, res) => {
     }
 });
 
-// 5. Admin API to Approve Withdrawal Request
 app.post('/api/admin/approve-withdrawal', async (req, res) => {
     try {
         const { id } = req.body;
