@@ -10,7 +10,9 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleRegister = (e) => {
+  const API_URL = "https://winarena-backend-1.onrender.com";
+
+  const handleRegister = async (e) => {
     e.preventDefault();
 
     if (!name || !email || !mobile || !password || !confirmPassword) {
@@ -28,35 +30,52 @@ export default function Register() {
       return;
     }
 
-    // 🟢 Save into registeredUsers database array for Login matching
-    const userData = { name, email, mobile, password };
-    const existingUsers = JSON.parse(localStorage.getItem("registeredUsers")) || [];
-    
-    // Check if email already exists
-    const userExists = existingUsers.some((u) => u.email === email);
-    if (userExists) {
-      alert("Email already registered! Please login.");
-      navigate("/login");
-      return;
+    try {
+      // 🟢 1. Backend database mein user sync karein taaki balance 0.00 rahe
+      const res = await fetch(`${API_URL}/api/user/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, mobile })
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message || "Registration failed on server!");
+        return;
+      }
+
+      // 🟢 2. Save into registeredUsers database array for local Login matching
+      const userData = { name, email, mobile, password };
+      const existingUsers = JSON.parse(localStorage.getItem("registeredUsers")) || [];
+      
+      const userExists = existingUsers.some((u) => u.email === email);
+      if (userExists) {
+        alert("Email already registered! Please login.");
+        navigate("/login");
+        return;
+      }
+
+      existingUsers.push(userData);
+      localStorage.setItem("registeredUsers", JSON.stringify(existingUsers));
+
+      // 🟢 3. Reset local wallet cache for new account
+      localStorage.setItem("walletBalance", "0.00");
+      localStorage.setItem("walletHistory", JSON.stringify([]));
+      localStorage.setItem("arenaWalletActivated", "false");
+
+      // Save active session & profile details
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("userName", name);
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userMobile", mobile);
+
+      alert("Account created successfully! 🚀");
+      navigate("/");
+    } catch (err) {
+      console.error("Registration network error:", err);
+      alert("Network error during registration. Please check your internet connection.");
     }
-
-    existingUsers.push(userData);
-    localStorage.setItem("registeredUsers", JSON.stringify(existingUsers));
-
-    // 🟢 FIXED: Naya account bante hi wallet balance aur history ko clean 0 par reset karein
-    localStorage.setItem("walletBalance", "0.00");
-    localStorage.setItem("walletHistory", JSON.stringify([]));
-    localStorage.setItem("arenaWalletActivated", "false");
-
-    // Save active session & profile details
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("user", JSON.stringify(userData));
-    localStorage.setItem("userName", name);
-    localStorage.setItem("userEmail", email);
-    localStorage.setItem("userMobile", mobile);
-
-    alert("Account created successfully! 🚀");
-    navigate("/");
   };
 
   return (
