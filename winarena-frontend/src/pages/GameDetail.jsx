@@ -7,23 +7,21 @@ export default function GameDetail() {
   const [tournaments, setTournaments] = useState([]);
   const [timeLeft, setTimeLeft] = useState({});
 
-  // 🟢 Live Backend URL Constant
   const API_URL = "https://winarena-backend-1.onrender.com";
+  const userEmail = localStorage.getItem("userEmail") || "";
+  const userName = localStorage.getItem("userName") || "";
 
-  // Fetch Tournaments from Backend MongoDB Database
   const fetchGameTournaments = () => {
     fetch(`${API_URL}/api/tournaments`)
       .then((res) => res.json())
       .then((data) => {
         const allTournaments = Array.isArray(data) ? data : (data.tournaments || []);
         
-        // Sirf is game ke tournaments filter karein (e.g. Free Fire)
         const filtered = allTournaments.filter(
           (t) => t.game && t.game.toLowerCase().replace(/\s+/g, "") === (gameName || "").toLowerCase().replace(/\s+/g, "")
         );
 
         if (filtered.length === 0) {
-          // Fallback to localStorage if backend is empty
           const localTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
           const localFiltered = localTournaments.filter(
             (t) => t.game && t.game.toLowerCase().replace(/\s+/g, "") === (gameName || "").toLowerCase().replace(/\s+/g, "")
@@ -35,7 +33,6 @@ export default function GameDetail() {
       })
       .catch((err) => {
         console.error("Error fetching tournaments from backend:", err);
-        // Fallback local storage
         const localTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
         const localFiltered = localTournaments.filter(
           (t) => t.game && t.game.toLowerCase().replace(/\s+/g, "") === (gameName || "").toLowerCase().replace(/\s+/g, "")
@@ -46,12 +43,10 @@ export default function GameDetail() {
 
   useEffect(() => {
     fetchGameTournaments();
-    // 🟢 Auto-refresh every 2 seconds for ultra-fast live updates from backend
     const interval = setInterval(fetchGameTournaments, 2000);
     return () => clearInterval(interval);
   }, [gameName]);
 
-  // Live Countdown Timer logic
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
@@ -79,7 +74,6 @@ export default function GameDetail() {
   return (
     <div style={{ padding: "20px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto", boxSizing: "border-box" }}>
       
-      {/* BACK BUTTON */}
       <button 
         onClick={() => navigate(-1)} 
         style={{ 
@@ -96,7 +90,6 @@ export default function GameDetail() {
         ← Back
       </button>
 
-      {/* HEADER TITLE */}
       <h1 style={{ fontSize: "20px", color: "#fbbf24", marginBottom: "4px", fontWeight: "900", textTransform: "uppercase" }}>
         {gameName} Tournaments
       </h1>
@@ -104,7 +97,6 @@ export default function GameDetail() {
         Live and upcoming tournaments for {gameName}.
       </p>
 
-      {/* TOURNAMENTS LIST */}
       {tournaments.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
           <p>No active tournaments found for {gameName}. Check admin panel to create one!</p>
@@ -118,6 +110,14 @@ export default function GameDetail() {
             const isFull = registeredCount >= maxSlots;
             const timerText = timeLeft[tournamentId] || "Loading...";
 
+            // Check if user already joined this tournament
+            const localJoinedIds = JSON.parse(localStorage.getItem("myJoinedTournamentIds")) || [];
+            const isLocallyJoined = localJoinedIds.includes(tournamentId);
+            const isRegisteredInDb = tournament.registeredUsers && (
+              tournament.registeredUsers.includes(userName) || tournament.registeredUsers.includes(userEmail)
+            );
+            const isAlreadyJoined = isLocallyJoined || isRegisteredInDb;
+
             return (
               <div 
                 key={tournamentId}
@@ -129,7 +129,6 @@ export default function GameDetail() {
                   boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
                 }}
               >
-                {/* TOP BAR: Title & Live Badge / Timer */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                   <h3 style={{ margin: 0, fontSize: "15px", color: "#fff", fontWeight: "900", textTransform: "uppercase" }}>
                     {tournament.game} – {tournament.mode}
@@ -139,7 +138,6 @@ export default function GameDetail() {
                   </span>
                 </div>
 
-                {/* SLOTS & TIMER */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", fontSize: "12px" }}>
                   <span style={{ color: "#9ca3af" }}>
                     Slots: <strong style={{ color: "#fff" }}>{registeredCount} / {maxSlots}</strong>
@@ -149,7 +147,6 @@ export default function GameDetail() {
                   </div>
                 </div>
 
-                {/* ENTRY & PRIZE */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <div>
                     <span style={{ fontSize: "9px", color: "#9ca3af", display: "block", fontWeight: "700" }}>ENTRY</span>
@@ -161,24 +158,23 @@ export default function GameDetail() {
                   </div>
                 </div>
 
-                {/* JOIN NOW BUTTON */}
                 <button 
-                  disabled={isFull}
+                  disabled={isFull || isAlreadyJoined}
                   onClick={() => navigate(`/tournament/${tournamentId}`)}
                   style={{ 
-                    background: isFull ? "#4b5563" : "#7c3aed", 
+                    background: isAlreadyJoined ? "#059669" : (isFull ? "#4b5563" : "#7c3aed"), 
                     color: "#fff", 
                     border: "none", 
                     padding: "12px", 
                     borderRadius: "10px", 
                     fontWeight: "900", 
-                    cursor: isFull ? "not-allowed" : "pointer",
+                    cursor: (isFull || isAlreadyJoined) ? "not-allowed" : "pointer",
                     width: "100%",
                     fontSize: "13px",
-                    boxShadow: isFull ? "none" : "0 4px 15px rgba(124, 58, 237, 0.4)"
+                    boxShadow: (isFull || isAlreadyJoined) ? "none" : "0 4px 15px rgba(124, 58, 237, 0.4)"
                   }}
                 >
-                  {isFull ? "SLOTS FULL" : "JOIN NOW"}
+                  {isAlreadyJoined ? "✓ ALREADY JOINED" : (isFull ? "SLOTS FULL" : "JOIN NOW")}
                 </button>
 
               </div>
