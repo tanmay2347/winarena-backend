@@ -69,12 +69,12 @@ export default function ArenaWallet() {
     setHistory(savedHistory);
   }, [navigate, userEmail]);
 
-  // 🟢 FIXED: Activation Fee ab backend database se minus hogi taaki sync rahe
+  // 🟢 FIXED: Activation fee payment ab backend database se properly deduct hogi aur balance 0 nahi hoga
   const handleActivateWallet = async () => {
     const activationFee = 29;
 
     if (balance < activationFee) {
-      alert(`⚠️ Insufficient Balance!\n\nYou need ₹${activationFee} to activate Arena Wallet, but your balance is ₹${balance.toFixed(2)}.`);
+      alert(`⚠️ Insufficient Balance!\n\nYou need ₹${activationFee} to activate Arena Wallet, but your balance is ₹${balance.toFixed(2)}. Please add money to your wallet first.`);
       return;
     }
 
@@ -90,8 +90,9 @@ export default function ArenaWallet() {
       const data = await res.json();
 
       if (data.success) {
-        setBalance(data.newBalance);
-        localStorage.setItem("walletBalance", data.newBalance.toFixed(2));
+        const newBalance = data.newBalance !== undefined ? data.newBalance : (balance - activationFee);
+        setBalance(newBalance);
+        localStorage.setItem("walletBalance", newBalance.toFixed(2));
         localStorage.setItem("arenaWalletActivated", "true");
         setIsActivated(true);
         alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
