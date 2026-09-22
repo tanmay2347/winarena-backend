@@ -38,6 +38,16 @@ mongoose.connect(MONGO_URI)
 // 1. SCHEMAS & MODELS
 // ==========================================
 
+// User Schema & Model (P2P Transfer ke liye walletBalance aur mobile zaroori hai)
+const userSchema = new mongoose.Schema({
+    name: String,
+    email: { type: String, unique: true },
+    mobile: { type: String, unique: true },
+    walletBalance: { type: Number, default: 500 },
+    timestamp: { type: Date, default: Date.now }
+});
+const User = mongoose.model('User', userSchema);
+
 // Admin Earnings Schema & Model
 const adminEarningsSchema = new mongoose.Schema({
     userId: String,
@@ -90,7 +100,7 @@ app.get('/api/tournaments', async (req, res) => {
     }
 });
 
-// Create Tournament API (Admin panel ke totalSlots aur baaki fields ke sath match kiya gaya)
+// Create Tournament API
 app.post('/api/tournaments', async (req, res) => {
     try {
         const { game, mode, entry, prize, totalSlots, slots, startTime } = req.body;
@@ -114,7 +124,7 @@ app.post('/api/tournaments', async (req, res) => {
     }
 });
 
-// Update / Publish Room Credentials API (Admin panel ke /api/tournaments/room route ke sath match kiya gaya)
+// Update / Publish Room Credentials API
 app.post('/api/tournaments/room', async (req, res) => {
     try {
         const { tournamentId, roomId, roomPass } = req.body;
@@ -146,6 +156,62 @@ app.delete('/api/tournaments/:id', async (req, res) => {
     } catch (err) {
         console.error("Delete tournament error:", err);
         res.status(500).json({ success: false, message: "Server error during deletion" });
+    }
+});
+
+
+// ---------------- P2P WALLET TRANSFER API (Sender & Recipient Both Auto-Sync) ----------------
+app.post('/api/transfer', async (req, res) => {
+    try {
+        const { senderEmail, recipientMobile, amount } = req.body;
+        const trAmount = parseFloat(amount);
+        
+        if (!trAmount || trAmount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid transfer amount!" });
+        }
+
+        // 1. Sender dhoondein, agar na mile toh auto-create karein
+        let sender = await User.findOne({ email: senderEmail });
+        if (!sender) {
+            sender = new User({
+                name: senderEmail ? senderEmail.split('@')[0] : "Sender",
+                email: senderEmail || "user@winarena.com",
+                mobile: "8857824607",
+                walletBalance: 1000
+            });
+        }
+
+        // 2. Recipient dhoondein, agar na mile toh auto-create karein
+        let recipient = await User.findOne({ mobile: recipientMobile });
+        if (!recipient) {
+            recipient = new User({
+                name: `User_${recipientMobile ? recipientMobile.slice(-4) : "1234"}`,
+                email: `${recipientMobile || "9876543210"}@winarena.com`,
+                mobile: recipientMobile || "9876543210",
+                walletBalance: 500
+            });
+        }
+
+        if (sender.walletBalance < trAmount) {
+            return res.status(400).json({ success: false, message: "Insufficient wallet balance!" });
+        }
+
+        // 3. Sender se minus aur Recipient mein plus karein
+        sender.walletBalance -= trAmount;
+        recipient.walletBalance += trAmount;
+
+        await sender.save();
+        await recipient.save();
+
+        res.json({ 
+            success: true, 
+            message: "Transfer successful!", 
+            senderNewBalance: sender.walletBalance,
+            recipientNewBalance: recipient.walletBalance 
+        });
+    } catch (err) {
+        console.error("P2P Transfer error:", err);
+        res.status(500).json({ success: false, message: "Server error during P2P transfer" });
     }
 });
 
@@ -213,7 +279,7 @@ app.post('/api/withdraw', async (req, res) => {
             commissionAmount: commission,
             finalPayout,
             method,
-            details: details || {}, // User ki bank/UPI details yahan save hongi
+            details: details || {},
             status: "Pending"
         });
         await earningRecord.save();
