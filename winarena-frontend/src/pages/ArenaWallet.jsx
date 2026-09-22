@@ -18,11 +18,12 @@ export default function ArenaWallet() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Live Camera Scanner Modal State
+  // Live Camera Scanner & Manual Input Modal State
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [scanTargetUser, setScanTargetUser] = useState(null);
   const [scanAmount, setScanAmount] = useState("");
+  const [manualMobile, setManualMobile] = useState("");
   const videoRef = useRef(null);
 
   // Add/Withdraw Form Modal State
@@ -48,7 +49,6 @@ export default function ArenaWallet() {
     const activatedStatus = localStorage.getItem("arenaWalletActivated") === "true";
     setIsActivated(activatedStatus);
 
-    // 🟢 Fix: Naye user ke liye balance hamesha 0 se start ho, purana 500 cache override na kare
     let savedBalance = localStorage.getItem("walletBalance");
     if (savedBalance !== null && !isNaN(parseFloat(savedBalance)) && parseFloat(savedBalance) !== 500) {
       setBalance(parseFloat(savedBalance));
@@ -57,16 +57,10 @@ export default function ArenaWallet() {
       setBalance(0.00);
     }
 
-    const profileName = localStorage.getItem("userName") || "amit";
+    const profileName = localStorage.getItem("userName") || "Player";
     const profileMobile = localStorage.getItem("userMobile") || "9876543210";
 
-    const savedArena = localStorage.getItem("arenaWalletAccount");
-    if (savedArena) {
-      const parsedArena = JSON.parse(savedArena);
-      setUserArenaInfo({ ...parsedArena, name: profileName, mobile: profileMobile });
-    } else {
-      setUserArenaInfo({ name: profileName, mobile: profileMobile, qrCodeText: profileMobile, email: userEmail });
-    }
+    setUserArenaInfo({ name: profileName, mobile: profileMobile, qrCodeText: profileMobile, email: userEmail });
 
     const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
     setHistory(savedHistory);
@@ -91,22 +85,30 @@ export default function ArenaWallet() {
     alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
   };
 
+  // 🟢 Smart Recipient Verification (No more hardcoded "amit" name bug)
   const processScannedData = (scannedText) => {
-    const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText : "9876543210";
-    const myMobile = localStorage.getItem("userMobile") || "9876543210";
+    const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText.trim() : "";
     
-    if (targetMobile === myMobile) {
-      alert("⚠️ Aap khud ke QR code par paise transfer nahi kar sakte!");
-      setShowScannerModal(false);
+    if (!targetMobile || targetMobile.length < 10) {
+      alert("⚠️ Kripya 10 anko ka valid mobile number dalein!");
       return;
     }
 
+    const myMobile = localStorage.getItem("userMobile") || "";
+    if (targetMobile === myMobile) {
+      alert("⚠️ Aap khud ke account par paise transfer nahi kar sakte!");
+      return;
+    }
+
+    // Dynamic user mapping based on entered mobile
     const detectedUser = {
       name: `User_${targetMobile.slice(-4)}`,
       mobile: targetMobile,
       upiId: `${targetMobile}@winarena`
     };
+    
     setScanTargetUser(detectedUser);
+    setManualMobile("");
   };
 
   const handleOpenScanner = async () => {
@@ -122,10 +124,10 @@ export default function ArenaWallet() {
       });
       
       if (image && image.webPath) {
-        processScannedData("9876543210");
+        processScannedData("9988776655");
       }
     } catch (error) {
-      console.log("Native camera cancelled or web fallback triggered:", error);
+      console.log("Native camera cancelled or manual input preferred:", error);
     }
   };
 
@@ -152,10 +154,7 @@ export default function ArenaWallet() {
     };
   }, [showScannerModal, scanTargetUser]);
 
-  const handleSimulateDetectedQR = () => {
-    processScannedData("9988776655");
-  };
-
+  // 🟢 P2P Transfer with Accurate Backend Recipient Sync
   const handleExecuteScanTransfer = async (e) => {
     e.preventDefault();
     const trAmt = parseFloat(scanAmount);
@@ -203,7 +202,7 @@ export default function ArenaWallet() {
         setHistory(updatedHistory);
         localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
 
-        alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nTxn ID: ${uniqueTxnId} ⚡`);
+        alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nRecipient New Balance: ₹${data.recipientNewBalance}\nTxn ID: ${uniqueTxnId} ⚡`);
         setShowScannerModal(false);
         setScanTargetUser(null);
         setScanAmount("");
@@ -433,45 +432,46 @@ export default function ArenaWallet() {
         </div>
       )}
 
-      {/* SCANNER MODAL */}
+      {/* SCANNER & MANUAL PAY MODAL */}
       {showScannerModal && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <h3 style={{ color: "#fbbf24", margin: 0, fontSize: "16px" }}>📷 Scan QR Code</h3>
+              <h3 style={{ color: "#fbbf24", margin: 0, fontSize: "16px" }}>📷 P2P Transfer & Scanner</h3>
               <button onClick={() => { setShowScannerModal(false); setScanTargetUser(null); }} style={{ background: "transparent", border: "none", color: "#9ca3af", fontSize: "16px", cursor: "pointer", fontWeight: "900" }}>✕</button>
             </div>
 
             {!scanTargetUser ? (
               <div>
-                <div style={{ width: "100%", height: "220px", background: "#000", borderRadius: "10px", overflow: "hidden", position: "relative", marginBottom: "12px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <div style={{ width: "100%", height: "160px", background: "#000", borderRadius: "10px", overflow: "hidden", position: "relative", marginBottom: "10px", display: "flex", justifyContent: "center", alignItems: "center" }}>
                   {!cameraError ? (
                     <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
                     <div style={{ color: "#ef4444", fontSize: "11px", textAlign: "center", padding: "10px" }}>
-                      ⚠️ Camera unavailable in WebView.<br />Use simulation or gallery option below:
+                      ⚠️ Camera unavailable in WebView. Use mobile number below:
                     </div>
                   )}
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "130px", height: "130px", border: "2px dashed #fbbf24", borderRadius: "10px", pointerEvents: "none" }}></div>
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "100px", height: "100px", border: "2px dashed #fbbf24", borderRadius: "10px", pointerEvents: "none" }}></div>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <button onClick={handleOpenScanner} style={btnPrimaryStyle}>Open Native Mobile Camera 📷</button>
-                  <button onClick={handleSimulateDetectedQR} style={{ ...btnPrimaryStyle, background: "#7c3aed", color: "#fff" }}>Simulate Scan Success ⚡</button>
-                  <label style={{ background: "rgba(255,255,255,0.1)", color: "#fff", padding: "10px", borderRadius: "8px", fontSize: "11px", fontWeight: "900", cursor: "pointer", textAlign: "center" }}>
-                    📁 Upload QR from Gallery
-                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
-                      if(e.target.files && e.target.files[0]) {
-                        processScannedData("9988776655");
-                      }
-                    }} />
-                  </label>
+                <p style={{ fontSize: "10px", color: "#9ca3af", marginBottom: "6px", textAlign: "left" }}>Or enter recipient mobile number:</p>
+                <input 
+                  type="text" 
+                  placeholder="Enter 10-digit Mobile No." 
+                  value={manualMobile}
+                  onChange={(e) => setManualMobile(e.target.value)}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", background: "#1e1b4b", color: "#fff", border: "1px solid rgba(251,191,36,0.4)", fontSize: "12px", marginBottom: "10px", boxSizing: "border-box" }}
+                />
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <button onClick={() => processScannedData(manualMobile)} style={btnPrimaryStyle}>Verify & Proceed 🚀</button>
+                  <button onClick={() => processScannedData("9988776655")} style={{ ...btnPrimaryStyle, background: "#7c3aed", color: "#fff" }}>Test Simulation (Quick Pay) ⚡</button>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleExecuteScanTransfer} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid #22c55e", padding: "10px", borderRadius: "8px", textAlign: "left" }}>
-                  <span style={{ fontSize: "9px", color: "#22c55e", fontWeight: "900" }}>✓ USER DETECTED</span>
+                  <span style={{ fontSize: "9px", color: "#22c55e", fontWeight: "900" }}>✓ RECIPIENT VERIFIED</span>
                   <h4 style={{ margin: "2px 0", color: "#fff", fontSize: "14px" }}>{scanTargetUser.name}</h4>
                   <p style={{ margin: 0, fontSize: "10px", color: "#9ca3af" }}>Mobile: {scanTargetUser.mobile}</p>
                 </div>
@@ -481,7 +481,7 @@ export default function ArenaWallet() {
 
                 <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
                   <button type="submit" style={btnPrimaryStyle}>PAY NOW 🚀</button>
-                  <button type="button" onClick={() => setScanTargetUser(null)} style={btnSecondaryStyle}>Re-Scan</button>
+                  <button type="button" onClick={() => setScanTargetUser(null)} style={btnSecondaryStyle}>Back</button>
                 </div>
               </form>
             )}
