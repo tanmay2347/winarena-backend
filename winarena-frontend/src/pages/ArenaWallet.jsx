@@ -5,7 +5,10 @@ import { Camera, CameraResultType } from "@capacitor/camera";
 
 export default function ArenaWallet() {
   const navigate = useNavigate();
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState(() => {
+    const saved = localStorage.getItem("walletBalance");
+    return saved !== null ? parseFloat(saved) : 0;
+  });
   const [history, setHistory] = useState([]);
   const [userArenaInfo, setUserArenaInfo] = useState(null);
   
@@ -48,12 +51,9 @@ export default function ArenaWallet() {
     fetch(`${API_URL}/api/user/balance?email=${encodeURIComponent(userEmail)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
+        if (data.success && data.balance !== undefined) {
           setBalance(data.balance);
           localStorage.setItem("walletBalance", data.balance.toFixed(2));
-        } else {
-          setBalance(0.00);
-          localStorage.setItem("walletBalance", "0.00");
         }
       })
       .catch((err) => {
@@ -69,7 +69,6 @@ export default function ArenaWallet() {
     setHistory(savedHistory);
   }, [navigate, userEmail]);
 
-  // 🟢 FIXED: Activation fee payment ab backend database se properly deduct hogi aur balance 0 nahi hoga
   const handleActivateWallet = async () => {
     const activationFee = 29;
 
@@ -105,7 +104,7 @@ export default function ArenaWallet() {
     }
   };
 
-  // 🟢 FIXED: Backend se exact user ka naam aur mobile number fetch karega (No hardcoded User_3210)
+  // 🟢 FIXED: Scanner ab database se exact registered user ka naam aur mobile fetch karega
   const processScannedData = async (scannedText) => {
     const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText.trim() : "";
     
@@ -131,19 +130,12 @@ export default function ArenaWallet() {
           upiId: `${data.user.mobile}@winarena`
         });
       } else {
-        setScanTargetUser({
-          name: `User_${targetMobile.slice(-4)}`,
-          mobile: targetMobile,
-          upiId: `${targetMobile}@winarena`
-        });
+        alert("⚠️ Yeh mobile number WinArena par registered nahi hai!");
+        setScanTargetUser(null);
       }
     } catch (err) {
       console.error("User search error:", err);
-      setScanTargetUser({
-        name: `User_${targetMobile.slice(-4)}`,
-        mobile: targetMobile,
-        upiId: `${targetMobile}@winarena`
-      });
+      alert("Server error while searching user.");
     }
     setManualMobile("");
   };
@@ -271,8 +263,9 @@ export default function ArenaWallet() {
       const data = await res.json();
 
       if (data.success) {
-        setBalance(data.newBalance);
-        localStorage.setItem("walletBalance", data.newBalance.toFixed(2));
+        const newBalance = data.newBalance;
+        setBalance(newBalance);
+        localStorage.setItem("walletBalance", newBalance.toFixed(2));
 
         const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
         const newHistoryItem = { 
@@ -326,8 +319,9 @@ export default function ArenaWallet() {
       const data = await res.json();
 
       if (data.success) {
-        setBalance(data.newBalance);
-        localStorage.setItem("walletBalance", data.newBalance.toFixed(2));
+        const newBalance = data.newBalance;
+        setBalance(newBalance);
+        localStorage.setItem("walletBalance", newBalance.toFixed(2));
 
         const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
         const newHistoryItem = { 
