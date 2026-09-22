@@ -46,8 +46,8 @@ export default function GameDetail() {
 
   useEffect(() => {
     fetchGameTournaments();
-    // Auto-refresh every 5 seconds to get live updates
-    const interval = setInterval(fetchGameTournaments, 5000);
+    // 🟢 Auto-refresh every 2 seconds for ultra-fast live updates from backend
+    const interval = setInterval(fetchGameTournaments, 2000);
     return () => clearInterval(interval);
   }, [gameName]);
 
