@@ -69,23 +69,39 @@ export default function ArenaWallet() {
     setHistory(savedHistory);
   }, [navigate, userEmail]);
 
-  const handleActivateWallet = () => {
-    let rawBalance = localStorage.getItem("walletBalance");
-    let currentBalance = (rawBalance === null || isNaN(parseFloat(rawBalance))) ? 0 : parseFloat(rawBalance);
+  // 🟢 FIXED: Activation Fee ab backend database se minus hogi taaki sync rahe
+  const handleActivateWallet = async () => {
     const activationFee = 29;
 
-    if (currentBalance < activationFee) {
-      alert(`⚠️ Insufficient Balance!\n\nYou need ₹${activationFee} to activate Arena Wallet, but your balance is ₹${currentBalance.toFixed(2)}. Please add money to your wallet first.`);
+    if (balance < activationFee) {
+      alert(`⚠️ Insufficient Balance!\n\nYou need ₹${activationFee} to activate Arena Wallet, but your balance is ₹${balance.toFixed(2)}.`);
       return;
     }
 
-    currentBalance -= activationFee;
-    setBalance(currentBalance);
-    localStorage.setItem("walletBalance", currentBalance.toFixed(2));
+    try {
+      const res = await fetch(`${API_URL}/api/wallet/deduct`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          amount: activationFee
+        })
+      });
+      const data = await res.json();
 
-    localStorage.setItem("arenaWalletActivated", "true");
-    setIsActivated(true);
-    alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
+      if (data.success) {
+        setBalance(data.newBalance);
+        localStorage.setItem("walletBalance", data.newBalance.toFixed(2));
+        localStorage.setItem("arenaWalletActivated", "true");
+        setIsActivated(true);
+        alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
+      } else {
+        alert(data.message || "Activation failed from server!");
+      }
+    } catch (err) {
+      console.error("Activation network error:", err);
+      alert("Network error during wallet activation.");
+    }
   };
 
   const processScannedData = (scannedText) => {
@@ -215,7 +231,6 @@ export default function ArenaWallet() {
     }
   };
 
-  // 🟢 FIXED: Direct Database Add Money API Connection
   const handleAddMoney = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
@@ -264,7 +279,7 @@ export default function ArenaWallet() {
     }
   };
 
-  const handleWithdraw = (e) => {
+  const handleWithdraw = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
 
@@ -279,26 +294,44 @@ export default function ArenaWallet() {
       return;
     }
 
-    const newBalance = balance - amt;
-    setBalance(newBalance);
-    localStorage.setItem("walletBalance", newBalance.toFixed(2));
+    try {
+      const res = await fetch(`${API_URL}/api/wallet/deduct`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          amount: amt
+        })
+      });
+      const data = await res.json();
 
-    const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
-    const newHistoryItem = { 
-      type: `Withdrawal via ${withdrawMethod}`, 
-      amount: -amt, 
-      time: new Date().toLocaleString(), 
-      txnId: uniqueTxnId,
-      status: "Success" 
-    };
+      if (data.success) {
+        setBalance(data.newBalance);
+        localStorage.setItem("walletBalance", data.newBalance.toFixed(2));
 
-    const updatedHistory = [newHistoryItem, ...history];
-    setHistory(updatedHistory);
-    localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
+        const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
+        const newHistoryItem = { 
+          type: `Withdrawal via ${withdrawMethod}`, 
+          amount: -amt, 
+          time: new Date().toLocaleString(), 
+          txnId: uniqueTxnId,
+          status: "Success" 
+        };
 
-    setAmount("");
-    setActionType(null);
-    alert(`Withdrawal Successful via ${withdrawMethod}!\nTxn ID: ${uniqueTxnId}`);
+        const updatedHistory = [newHistoryItem, ...history];
+        setHistory(updatedHistory);
+        localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
+
+        setAmount("");
+        setActionType(null);
+        alert(`Withdrawal Successful via ${withdrawMethod}!\nTxn ID: ${uniqueTxnId}`);
+      } else {
+        alert(data.message || "Withdrawal failed!");
+      }
+    } catch (err) {
+      console.error("Withdrawal error:", err);
+      alert("Network error during withdrawal.");
+    }
   };
 
   const filteredHistory = history.filter((item) => {
