@@ -53,11 +53,16 @@ export default function ArenaWallet() {
       setBalance(0.00);
     }
 
+    // Profile se asli naam aur mobile number uthayein
+    const profileName = localStorage.getItem("userName") || "amit";
+    const profileMobile = localStorage.getItem("userMobile") || "8857824607";
+
     const savedArena = localStorage.getItem("arenaWalletAccount");
     if (savedArena) {
-      setUserArenaInfo(JSON.parse(savedArena));
+      const parsedArena = JSON.parse(savedArena);
+      setUserArenaInfo({ ...parsedArena, name: profileName, mobile: profileMobile });
     } else {
-      setUserArenaInfo({ mobile: "8857824607", qrCodeText: "WINARENA-P2P-WALLET", email: "user@winarena.com" });
+      setUserArenaInfo({ name: profileName, mobile: profileMobile, qrCodeText: "WINARENA-P2P-WALLET", email: "user@winarena.com" });
     }
 
     const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
@@ -84,24 +89,15 @@ export default function ArenaWallet() {
     alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
   };
 
-  // 🟢 Dynamic QR Parser function instead of static name
+  // 🟢 Dynamic QR Parser fetching exact profile name and mobile number
   const processScannedData = (scannedText) => {
-    // Default dynamic user info based on scanned text/mobile
-    let detectedName = "WinArena User";
-    let detectedMobile = scannedText || "9876543210";
-    
-    if (scannedText && scannedText.includes("8857824607")) {
-      detectedName = "Tanmay (Admin)";
-    } else if (scannedText && scannedText.length > 5 && !scannedText.startsWith("WINARENA")) {
-      detectedName = `User_${scannedText.slice(-4)}` ;
-    } else {
-      detectedName = "Rahul_Esports"; // Fallback name if generic
-    }
+    const profileName = localStorage.getItem("userName") || "amit";
+    const profileMobile = localStorage.getItem("userMobile") || "8857824607";
 
     const detectedUser = {
-      name: detectedName,
-      mobile: detectedMobile,
-      upiId: `${detectedMobile}@winarena`
+      name: profileName,
+      mobile: profileMobile,
+      upiId: `${profileMobile}@winarena`
     };
     setScanTargetUser(detectedUser);
   };
@@ -120,7 +116,7 @@ export default function ArenaWallet() {
       });
       
       if (image && image.webPath) {
-        processScannedData("9876543210");
+        processScannedData("8857824607");
       }
     } catch (error) {
       console.log("Native camera cancelled or web fallback triggered:", error);
@@ -152,7 +148,7 @@ export default function ArenaWallet() {
   }, [showScannerModal, scanTargetUser]);
 
   const handleSimulateDetectedQR = () => {
-    processScannedData("9876543210");
+    processScannedData("8857824607");
   };
 
   const handleExecuteScanTransfer = (e) => {
@@ -169,6 +165,7 @@ export default function ArenaWallet() {
       return;
     }
 
+    // Sender balance deduction
     const newBalance = balance - trAmt;
     setBalance(newBalance);
     localStorage.setItem("walletBalance", newBalance.toFixed(2));
@@ -188,6 +185,17 @@ export default function ArenaWallet() {
     const updatedHistory = [historyItem, ...history];
     setHistory(updatedHistory);
     localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
+
+    // 🟢 Receiver (Scanner holder) account credit simulation for local sync
+    const receiverHistoryItem = {
+      type: `Received from P2P`,
+      amount: trAmt,
+      time: currentDateTime,
+      txnId: uniqueTxnId,
+      status: "Success"
+    };
+    const existingReceiverHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
+    localStorage.setItem("walletHistory", JSON.stringify([receiverHistoryItem, ...existingReceiverHistory]));
 
     alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nTxn ID: ${uniqueTxnId} ⚡`);
     setShowScannerModal(false);
@@ -405,6 +413,7 @@ export default function ArenaWallet() {
               />
               <span style={{ fontSize: "9px", color: "#000", fontWeight: "900", display: "block", marginTop: "6px" }}>SCAN TO PAY</span>
             </div>
+            <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 4px 0" }}>Name: {userArenaInfo?.name}</p>
             <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 14px 0" }}>Mobile: {userArenaInfo?.mobile}</p>
             <button onClick={() => setShowQrModal(false)} style={btnPrimaryStyle}>Close</button>
           </div>
@@ -440,9 +449,7 @@ export default function ArenaWallet() {
                     📁 Upload QR from Gallery
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                       if(e.target.files && e.target.files[0]) {
-                        // Dynamic QR data simulation or file name parsing
-                        const fileName = e.target.files[0].name;
-                        processScannedData(fileName);
+                        processSimulateDetectedQR();
                       }
                     }} />
                   </label>
