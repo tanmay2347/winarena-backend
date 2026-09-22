@@ -126,7 +126,7 @@ app.post('/api/user/register', async (req, res) => {
     }
 });
 
-// 🟢 Dedicated Add Money / Deposit API Route (FIXED)
+// Dedicated Add Money / Deposit API Route
 app.post('/api/wallet/add', async (req, res) => {
     try {
         const { email, amount } = req.body;
@@ -157,6 +157,76 @@ app.post('/api/wallet/add', async (req, res) => {
         res.status(500).json({ success: false, message: "Server error during deposit" });
     }
 });
+
+// 🟢 Dedicated Deduct / Spend Money API (For Activation, Tournament Entry, etc.)
+app.post('/api/wallet/deduct', async (req, res) => {
+    try {
+        const { email, amount } = req.body;
+        const deductAmount = parseFloat(amount);
+
+        if (!deductAmount || deductAmount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid amount!" });
+        }
+
+        let user = await User.findOne({ email: email || "user@winarena.com" });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found!" });
+        }
+
+        if (user.walletBalance < deductAmount) {
+            return res.status(400).json({ success: false, message: "Insufficient balance!" });
+        }
+
+        user.walletBalance = parseFloat((user.walletBalance - deductAmount).toFixed(2));
+        await user.save();
+
+        res.json({ 
+            success: true, 
+            message: "Amount deducted successfully!", 
+            newBalance: user.walletBalance 
+        });
+    } catch (err) {
+        console.error("Deduct money error:", err);
+        res.status(500).json({ success: false, message: "Server error during deduction" });
+    }
+});
+
+
+// ---------------- TOURNAMENT APIs ----------------
+
+app.get('/api/tournaments', async (req, res) => {
+    try {
+        const tournaments = await Tournament.find().sort({ timestamp: -1 });
+        res.json({ success: true, tournaments });
+    } catch (err) {
+        console.error("Fetch tournaments error:", err);
+        res.status(500).json({ success: false, message: "Server error while fetching tournaments" });
+    }
+});
+
+app.post('/api/tournaments', async (req, res) => {
+    try {
+        const { game, mode, entry, prize, totalSlots, slots, startTime } = req.body;
+        
+        const newTournament = new Tournament({
+            game,
+            mode,
+            entry,
+            prize,
+            slots: totalSlots || slots || 10,
+            startTime,
+            roomId: "",
+            roomPass: ""
+        });
+
+        await newTournament.save();
+        res.status(201).json({ success: true, message: "Tournament created successfully!", tournament: newTournament });
+    } catch (err) {
+        console.error("Error creating tournament:", err);
+        res.status(500).json({ success: false, message: "Server error while creating tournament" });
+    }
+});
+
 
 // P2P Wallet Transfer API
 app.post('/api/transfer', async (req, res) => {
