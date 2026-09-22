@@ -105,7 +105,8 @@ export default function ArenaWallet() {
     }
   };
 
-  const processScannedData = (scannedText) => {
+  // 🟢 FIXED: Backend se exact user ka naam aur mobile number fetch karega (No hardcoded User_3210)
+  const processScannedData = async (scannedText) => {
     const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText.trim() : "";
     
     if (!targetMobile || targetMobile.length < 10) {
@@ -119,13 +120,31 @@ export default function ArenaWallet() {
       return;
     }
 
-    const detectedUser = {
-      name: `User_${targetMobile.slice(-4)}`,
-      mobile: targetMobile,
-      upiId: `${targetMobile}@winarena`
-    };
-    
-    setScanTargetUser(detectedUser);
+    try {
+      const res = await fetch(`${API_URL}/api/user/search?mobile=${encodeURIComponent(targetMobile)}`);
+      const data = await res.json();
+
+      if (data.success && data.user) {
+        setScanTargetUser({
+          name: data.user.name,
+          mobile: data.user.mobile,
+          upiId: `${data.user.mobile}@winarena`
+        });
+      } else {
+        setScanTargetUser({
+          name: `User_${targetMobile.slice(-4)}`,
+          mobile: targetMobile,
+          upiId: `${targetMobile}@winarena`
+        });
+      }
+    } catch (err) {
+      console.error("User search error:", err);
+      setScanTargetUser({
+        name: `User_${targetMobile.slice(-4)}`,
+        mobile: targetMobile,
+        upiId: `${targetMobile}@winarena`
+      });
+    }
     setManualMobile("");
   };
 
