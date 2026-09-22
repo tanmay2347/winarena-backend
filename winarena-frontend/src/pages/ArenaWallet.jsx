@@ -64,7 +64,7 @@ export default function ArenaWallet() {
       const parsedArena = JSON.parse(savedArena);
       setUserArenaInfo({ ...parsedArena, name: profileName, mobile: profileMobile });
     } else {
-      setUserArenaInfo({ name: profileName, mobile: profileMobile, qrCodeText: "WINARENA-P2P-WALLET", email: userEmail });
+      setUserArenaInfo({ name: profileName, mobile: profileMobile, qrCodeText: profileMobile, email: userEmail });
     }
 
     const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
@@ -90,14 +90,23 @@ export default function ArenaWallet() {
     alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
   };
 
+  // 🟢 Fixed: Scanned text se actual recipient ka mobile aur naam detect hoga
   const processScannedData = (scannedText) => {
-    const profileName = localStorage.getItem("userName") || "amit";
-    const profileMobile = localStorage.getItem("userMobile") || "9876543210";
+    // Agar scanned text mein mobile number ya ID hai toh use karein, warna default test user rakhein
+    const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText : "9876543210";
+    
+    // Khud ke mobile par transfer rokne ke liye check
+    const myMobile = localStorage.getItem("userMobile") || "9876543210";
+    if (targetMobile === myMobile) {
+      alert("⚠️ Aap khud ke QR code par paise transfer nahi kar sakte!");
+      setShowScannerModal(false);
+      return;
+    }
 
     const detectedUser = {
-      name: profileName,
-      mobile: profileMobile,
-      upiId: `${profileMobile}@winarena`
+      name: `User_${targetMobile.slice(-4)}`,
+      mobile: targetMobile,
+      upiId: `${targetMobile}@winarena`
     };
     setScanTargetUser(detectedUser);
   };
@@ -146,10 +155,11 @@ export default function ArenaWallet() {
   }, [showScannerModal, scanTargetUser]);
 
   const handleSimulateDetectedQR = () => {
-    processScannedData("9876543210");
+    // Testing ke liye doosre user ka dummy mobile number pass karein
+    processScannedData("9988776655");
   };
 
-  // 🟢 Updated P2P Transfer with Real Backend Balance Sync
+  // 🟢 P2P Transfer with Proper Backend Sync
   const handleExecuteScanTransfer = async (e) => {
     e.preventDefault();
     const trAmt = parseFloat(scanAmount);
@@ -177,7 +187,6 @@ export default function ArenaWallet() {
       const data = await res.json();
 
       if (data.success) {
-        // Backend se aaya hua exact updated balance set karein
         const newBalance = data.senderNewBalance !== undefined ? data.senderNewBalance : (balance - trAmt);
         setBalance(newBalance);
         localStorage.setItem("walletBalance", newBalance.toFixed(2));
@@ -457,7 +466,7 @@ export default function ArenaWallet() {
                     📁 Upload QR from Gallery
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                       if(e.target.files && e.target.files[0]) {
-                        processSimulateDetectedQR();
+                        processScannedData("9988776655");
                       }
                     }} />
                   </label>
