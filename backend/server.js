@@ -100,6 +100,32 @@ app.get('/api/user/balance', async (req, res) => {
     }
 });
 
+// 🟢 User Register / Sync API (Naye user ko database mein 0 balance ke sath save karne ke liye)
+app.post('/api/user/register', async (req, res) => {
+    try {
+        const { name, email, mobile } = req.body;
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" });
+        }
+
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = new User({
+                name: name || "Arena Player",
+                email: email,
+                mobile: mobile || "",
+                walletBalance: 0.00 // Naye user ka balance hamesha 0.00 rahega
+            });
+            await user.save();
+        }
+
+        res.json({ success: true, message: "User synced successfully", balance: user.walletBalance });
+    } catch (err) {
+        console.error("User registration sync error:", err);
+        res.status(500).json({ success: false, message: "Server error during user sync" });
+    }
+});
+
 
 // ---------------- TOURNAMENT APIs ----------------
 
