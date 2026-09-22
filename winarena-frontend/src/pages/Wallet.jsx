@@ -40,8 +40,9 @@ export default function Wallet() {
     if (savedBalance !== null) {
       setBalance(parseFloat(savedBalance));
     } else {
-      localStorage.setItem("walletBalance", "0.00");
-      setBalance(0.00);
+      // 🟢 Admin ya user ke liye default 500 trial balance set kar diya hai
+      localStorage.setItem("walletBalance", "500.00");
+      setBalance(500.00);
     }
 
     const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
@@ -112,7 +113,7 @@ export default function Wallet() {
       }
 
       const options = {
-        key: "rzp_test_TZydNSxzH1KSjl", // Apni live ya test key yahan rakhein
+        key: "rzp_test_TZydNSxzH1KSjl",
         amount: data.order.amount,
         currency: "INR",
         name: "Win Arena",
