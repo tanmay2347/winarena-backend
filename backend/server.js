@@ -39,10 +39,10 @@ mongoose.connect(MONGO_URI)
 // ==========================================
 
 const userSchema = new mongoose.Schema({
-    name: String,
+    name: { type: String, default: "Arena Player" },
     email: { type: String, unique: true },
-    mobile: { type: String, unique: true },
-    walletBalance: { type: Number, default: 0.00 },
+    mobile: { type: String, default: "" },
+    walletBalance: { type: Number, default: 0.00 }, // 🟢 Default 0 balance
     timestamp: { type: Date, default: Date.now }
 });
 const User = mongoose.model('User', userSchema);
@@ -81,6 +81,23 @@ const Tournament = mongoose.model('Tournament', tournamentSchema);
 
 app.get('/', (req, res) => {
   res.send('Win Arena Backend API is active!');
+});
+
+// User Balance Get API (Taaki frontend directly accurate balance fetch kar sake)
+app.get('/api/user/balance', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) return res.status(400).json({ success: false, message: "Email required" });
+        
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = new User({ email, walletBalance: 0.00 });
+            await user.save();
+        }
+        res.json({ success: true, balance: user.walletBalance });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Error fetching balance" });
+    }
 });
 
 
@@ -153,7 +170,7 @@ app.delete('/api/tournaments/:id', async (req, res) => {
 });
 
 
-// ---------------- P2P WALLET TRANSFER API (Fully Fixed with .save()) ----------------
+// ---------------- P2P WALLET TRANSFER API (Fully Fixed, 0 Default, No Duplicate Crashes) ----------------
 app.post('/api/transfer', async (req, res) => {
     try {
         const { senderEmail, recipientMobile, amount } = req.body;
@@ -163,37 +180,49 @@ app.post('/api/transfer', async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid transfer amount!" });
         }
 
-        // 1. Sender dhoondein, agar na mile toh auto-create karke save karein
-        let sender = await User.findOne({ email: senderEmail });
+        const validSenderEmail = senderEmail || "user@winarena.com";
+        const cleanRecipientMobile = (recipientMobile || "").trim();
+
+        // 1. Sender dhoondein
+        let sender = await User.findOne({ email: validSenderEmail });
         if (!sender) {
             sender = new User({
-                name: senderEmail ? senderEmail.split('@')[0] : "Sender",
-                email: senderEmail || "user@winarena.com",
+                name: validSenderEmail.split('@')[0],
+                email: validSenderEmail,
                 mobile: "8857824607",
-                walletBalance: 1000
+                walletBalance: 100.00 // Naye sender ko initial balance testing ke liye
             });
             await sender.save();
         }
 
-        // 2. Recipient dhoondein, agar na mile toh auto-create karke save karein
-        let recipient = await User.findOne({ mobile: recipientMobile });
+        // 2. Recipient dhoondein (Default 0.00 - Never 500!)
+        let recipient = await User.findOne({ mobile: cleanRecipientMobile });
         if (!recipient) {
             recipient = new User({
-                name: `User_${recipientMobile ? recipientMobile.slice(-4) : "1234"}`,
-                email: `${recipientMobile || "9876543210"}@winarena.com`,
-                mobile: recipientMobile || "9876543210",
-                walletBalance: 500
+                name: `User_${cleanRecipientMobile.slice(-4) || "Player"}`,
+                email: `${cleanRecipientMobile || Date.now()}@winarena.com`,
+                mobile: cleanRecipientMobile,
+                walletBalance: 0.00 // 🟢 Fixed: Naye user ko 0 balance milega!
             });
             await recipient.save();
         }
 
-        if (sender.walletBalance < trAmount) {
-            return res.status(400).json({ success: false, message: "Insufficient wallet balance!" });
+        // Khud ko transfer rokna
+        if (sender.mobile && cleanRecipientMobile && sender.mobile === cleanRecipientMobile) {
+            return res.status(400).json({ success: false, message: "Cannot transfer money to your own account!" });
         }
 
-        // 3. Sender se minus aur Recipient mein plus karein
-        sender.walletBalance -= trAmount;
-        recipient.walletBalance += trAmount;
+        // Balance check
+        if (sender.walletBalance < trAmount) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Insufficient wallet balance! Your balance is ₹${sender.walletBalance.toFixed(2)}` 
+            });
+        }
+
+        // 3. Sender se minus aur Recipient mein exact transfer amount add
+        sender.walletBalance = parseFloat((sender.walletBalance - trAmount).toFixed(2));
+        recipient.walletBalance = parseFloat((recipient.walletBalance + trAmount).toFixed(2));
 
         await sender.save();
         await recipient.save();
@@ -206,7 +235,7 @@ app.post('/api/transfer', async (req, res) => {
         });
     } catch (err) {
         console.error("P2P Transfer error:", err);
-        res.status(500).json({ success: false, message: "Server error during P2P transfer" });
+        res.status(500).json({ success: false, message: "Server error during P2P transfer: " + err.message });
     }
 });
 
