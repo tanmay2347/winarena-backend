@@ -9,16 +9,13 @@ export default function ArenaWallet() {
   const [history, setHistory] = useState([]);
   const [userArenaInfo, setUserArenaInfo] = useState(null);
   
-  // 🟢 Activation State (₹29 Lock Condition)
   const [isActivated, setIsActivated] = useState(false);
-  const [lockAmount] = useState(29); // 🔒 Fixed ₹29 Minimum Lock Reserve
+  const [lockAmount] = useState(29);
 
-  // Modals States
   const [showQrModal, setShowQrModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Live Camera Scanner & Manual Input Modal State
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [scanTargetUser, setScanTargetUser] = useState(null);
@@ -26,8 +23,7 @@ export default function ArenaWallet() {
   const [manualMobile, setManualMobile] = useState("");
   const videoRef = useRef(null);
 
-  // Add/Withdraw Form Modal State
-  const [actionType, setActionType] = useState(null); // "add" or "withdraw"
+  const [actionType, setActionType] = useState(null);
   const [amount, setAmount] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("UPI");
   const [upiId, setUpiId] = useState("");
@@ -37,7 +33,6 @@ export default function ArenaWallet() {
   const API_URL = "https://winarena-backend-1.onrender.com";
   const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
 
-  // 🟢 Backend se real-time balance fetch karne ka function
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
@@ -50,7 +45,6 @@ export default function ArenaWallet() {
     const activatedStatus = localStorage.getItem("arenaWalletActivated") === "true";
     setIsActivated(activatedStatus);
 
-    // Backend se is user ka real balance fetch karein
     fetch(`${API_URL}/api/user/balance?email=${encodeURIComponent(userEmail)}`)
       .then((res) => res.json())
       .then((data) => {
@@ -63,13 +57,7 @@ export default function ArenaWallet() {
         }
       })
       .catch((err) => {
-        console.error("Balance fetch error, using local storage fallback:", err);
-        let savedBalance = localStorage.getItem("walletBalance");
-        if (savedBalance !== null && !isNaN(parseFloat(savedBalance)) && parseFloat(savedBalance) !== 500) {
-          setBalance(parseFloat(savedBalance));
-        } else {
-          setBalance(0.00);
-        }
+        console.error("Balance fetch error:", err);
       });
 
     const profileName = localStorage.getItem("userName") || "Player";
@@ -140,7 +128,7 @@ export default function ArenaWallet() {
         processScannedData("9988776655");
       }
     } catch (error) {
-      console.log("Native camera cancelled or manual input preferred:", error);
+      console.log("Native camera cancelled:", error);
     }
   };
 
@@ -214,7 +202,7 @@ export default function ArenaWallet() {
         setHistory(updatedHistory);
         localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
 
-        alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nRecipient New Balance: ₹${data.recipientNewBalance}\nTxn ID: ${uniqueTxnId} ⚡`);
+        alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nTxn ID: ${uniqueTxnId} ⚡`);
         setShowScannerModal(false);
         setScanTargetUser(null);
         setScanAmount("");
@@ -223,11 +211,11 @@ export default function ArenaWallet() {
       }
     } catch (err) {
       console.error("Transfer network error:", err);
-      alert("Server error during P2P transfer process. Please check your internet connection.");
+      alert("Server error during P2P transfer process.");
     }
   };
 
-  // 🟢 FIXED: Add Money API Call to Backend so deposited balance is saved permanently
+  // 🟢 FIXED: Direct Database Add Money API Connection
   const handleAddMoney = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
@@ -237,49 +225,42 @@ export default function ArenaWallet() {
     }
 
     try {
-      // Backend par transfer API ka use karke ya dummy deposit request bhej kar balance update karein
-      // Yahan hum recipientMobile ki jagah khud ko ya direct transfer API use kar sakte hain ya naya add-money endpoint
-      // Lekin asan tarike ke liye hum P2P transfer API ya ek dedicated balance update bhej sakte hain:
-      const res = await fetch(`${API_URL}/api/transfer`, {
+      const res = await fetch(`${API_URL}/api/wallet/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          senderEmail: "admin@winarena.com", // Admin se user ko deposit
-          recipientMobile: localStorage.getItem("userMobile") || "9876543210",
+          email: userEmail,
           amount: amt
         })
       });
       const data = await res.json();
 
-      const newBalance = balance + amt;
-      setBalance(newBalance);
-      localStorage.setItem("walletBalance", newBalance.toFixed(2));
+      if (data.success) {
+        setBalance(data.newBalance);
+        localStorage.setItem("walletBalance", data.newBalance.toFixed(2));
 
-      const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
-      const newHistoryItem = { 
-        type: "Deposit via Razorpay / Add Money", 
-        amount: amt, 
-        time: new Date().toLocaleString(), 
-        txnId: uniqueTxnId,
-        status: "Success" 
-      };
+        const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
+        const newHistoryItem = { 
+          type: "Deposit via Add Money", 
+          amount: amt, 
+          time: new Date().toLocaleString(), 
+          txnId: uniqueTxnId,
+          status: "Success" 
+        };
 
-      const updatedHistory = [newHistoryItem, ...history];
-      setHistory(updatedHistory);
-      localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
+        const updatedHistory = [newHistoryItem, ...history];
+        setHistory(updatedHistory);
+        localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
 
-      setAmount("");
-      setActionType(null);
-      alert(`Successfully added ₹${amt}!\nTxn ID: ${uniqueTxnId}`);
+        setAmount("");
+        setActionType(null);
+        alert(`Successfully added ₹${amt}!\nTxn ID: ${uniqueTxnId}`);
+      } else {
+        alert(data.message || "Failed to add money from server!");
+      }
     } catch (err) {
-      console.error("Add money error:", err);
-      // Fallback local update agar server down ho
-      const newBalance = balance + amt;
-      setBalance(newBalance);
-      localStorage.setItem("walletBalance", newBalance.toFixed(2));
-      setAmount("");
-      setActionType(null);
-      alert(`Successfully added ₹${amt}!`);
+      console.error("Add money network error:", err);
+      alert("Network error while adding money.");
     }
   };
 
@@ -470,7 +451,7 @@ export default function ArenaWallet() {
         </div>
       )}
 
-      {/* SCANNER & MANUAL PAY MODAL */}
+      {/* SCANNER MODAL */}
       {showScannerModal && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
