@@ -28,7 +28,7 @@ export default function Register() {
       return;
     }
 
-    // 🟢 FIXED: Save into registeredUsers database array for Login matching
+    // 🟢 Save into registeredUsers database array for Login matching
     const userData = { name, email, mobile, password };
     const existingUsers = JSON.parse(localStorage.getItem("registeredUsers")) || [];
     
@@ -42,6 +42,11 @@ export default function Register() {
 
     existingUsers.push(userData);
     localStorage.setItem("registeredUsers", JSON.stringify(existingUsers));
+
+    // 🟢 FIXED: Naya account bante hi wallet balance aur history ko clean 0 par reset karein
+    localStorage.setItem("walletBalance", "0.00");
+    localStorage.setItem("walletHistory", JSON.stringify([]));
+    localStorage.setItem("arenaWalletActivated", "false");
 
     // Save active session & profile details
     localStorage.setItem("isLoggedIn", "true");

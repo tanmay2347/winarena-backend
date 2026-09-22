@@ -23,20 +23,25 @@ export default function Login() {
 
     // 🛡️ Check Normal User (Local Storage Database & Single User match)
     const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers")) || [];
-    
-    // Agar registeredUsers array khali hai, par single user object save hai toh usse bhi check karo
     const singleUser = JSON.parse(localStorage.getItem("user"));
 
     let foundUser = registeredUsers.find(
       (user) => user.email === email && user.password === password
     );
 
-    // Agar array mein nahi mila, toh single saved user se match karo
     if (!foundUser && singleUser && singleUser.email === email && singleUser.password === password) {
       foundUser = singleUser;
     }
 
     if (foundUser) {
+      // 🟢 Check if user changed or logged in fresh -> Reset wallet & history cache to 0 for safety
+      const currentStoredEmail = localStorage.getItem("userEmail");
+      if (currentStoredEmail !== foundUser.email) {
+        localStorage.setItem("walletBalance", "0.00");
+        localStorage.setItem("walletHistory", JSON.stringify([]));
+        localStorage.setItem("arenaWalletActivated", "false");
+      }
+
       localStorage.setItem("isLoggedIn", "true");
       localStorage.removeItem("isAdmin");
       

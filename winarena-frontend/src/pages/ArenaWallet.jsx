@@ -37,6 +37,7 @@ export default function ArenaWallet() {
   const API_URL = "https://winarena-backend-1.onrender.com";
   const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
 
+  // 🟢 Backend se real-time balance fetch karne ka function
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
@@ -49,13 +50,27 @@ export default function ArenaWallet() {
     const activatedStatus = localStorage.getItem("arenaWalletActivated") === "true";
     setIsActivated(activatedStatus);
 
-    let savedBalance = localStorage.getItem("walletBalance");
-    if (savedBalance !== null && !isNaN(parseFloat(savedBalance)) && parseFloat(savedBalance) !== 500) {
-      setBalance(parseFloat(savedBalance));
-    } else {
-      localStorage.setItem("walletBalance", "0.00");
-      setBalance(0.00);
-    }
+    // Backend se is user ka real balance fetch karein taaki purana cache match na ho
+    fetch(`${API_URL}/api/user/balance?email=${encodeURIComponent(userEmail)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setBalance(data.balance);
+          localStorage.setItem("walletBalance", data.balance.toFixed(2));
+        } else {
+          setBalance(0.00);
+          localStorage.setItem("walletBalance", "0.00");
+        }
+      })
+      .catch((err) => {
+        console.error("Balance fetch error, using local storage fallback:", err);
+        let savedBalance = localStorage.getItem("walletBalance");
+        if (savedBalance !== null && !isNaN(parseFloat(savedBalance)) && parseFloat(savedBalance) !== 500) {
+          setBalance(parseFloat(savedBalance));
+        } else {
+          setBalance(0.00);
+        }
+      });
 
     const profileName = localStorage.getItem("userName") || "Player";
     const profileMobile = localStorage.getItem("userMobile") || "9876543210";
@@ -64,7 +79,7 @@ export default function ArenaWallet() {
 
     const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
     setHistory(savedHistory);
-  }, [navigate]);
+  }, [navigate, userEmail]);
 
   const handleActivateWallet = () => {
     let rawBalance = localStorage.getItem("walletBalance");
@@ -85,7 +100,6 @@ export default function ArenaWallet() {
     alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
   };
 
-  // 🟢 Smart Recipient Verification (No more hardcoded "amit" name bug)
   const processScannedData = (scannedText) => {
     const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText.trim() : "";
     
@@ -100,7 +114,6 @@ export default function ArenaWallet() {
       return;
     }
 
-    // Dynamic user mapping based on entered mobile
     const detectedUser = {
       name: `User_${targetMobile.slice(-4)}`,
       mobile: targetMobile,
@@ -154,7 +167,6 @@ export default function ArenaWallet() {
     };
   }, [showScannerModal, scanTargetUser]);
 
-  // 🟢 P2P Transfer with Accurate Backend Recipient Sync
   const handleExecuteScanTransfer = async (e) => {
     e.preventDefault();
     const trAmt = parseFloat(scanAmount);
