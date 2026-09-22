@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema({
     name: String,
     email: { type: String, unique: true },
     mobile: { type: String, unique: true },
-    walletBalance: { type: Number, default: 500 },
+    walletBalance: { type: Number, default: 0.00 },
     timestamp: { type: Date, default: Date.now }
 });
 const User = mongoose.model('User', userSchema);
