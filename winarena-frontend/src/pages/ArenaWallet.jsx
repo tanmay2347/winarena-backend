@@ -48,9 +48,10 @@ export default function ArenaWallet() {
     const activatedStatus = localStorage.getItem("arenaWalletActivated") === "true";
     setIsActivated(activatedStatus);
 
-    let savedBalance = parseFloat(localStorage.getItem("walletBalance"));
-    if (!isNaN(savedBalance)) {
-      setBalance(savedBalance);
+    // 🟢 Fix: Naye user ke liye balance hamesha 0 se start ho, purana 500 cache override na kare
+    let savedBalance = localStorage.getItem("walletBalance");
+    if (savedBalance !== null && !isNaN(parseFloat(savedBalance)) && parseFloat(savedBalance) !== 500) {
+      setBalance(parseFloat(savedBalance));
     } else {
       localStorage.setItem("walletBalance", "0.00");
       setBalance(0.00);
@@ -90,13 +91,10 @@ export default function ArenaWallet() {
     alert(`🎉 Arena Wallet Activated Successfully!\n\n₹${activationFee} deducted from your wallet.`);
   };
 
-  // 🟢 Fixed: Scanned text se actual recipient ka mobile aur naam detect hoga
   const processScannedData = (scannedText) => {
-    // Agar scanned text mein mobile number ya ID hai toh use karein, warna default test user rakhein
     const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText : "9876543210";
-    
-    // Khud ke mobile par transfer rokne ke liye check
     const myMobile = localStorage.getItem("userMobile") || "9876543210";
+    
     if (targetMobile === myMobile) {
       alert("⚠️ Aap khud ke QR code par paise transfer nahi kar sakte!");
       setShowScannerModal(false);
@@ -155,11 +153,9 @@ export default function ArenaWallet() {
   }, [showScannerModal, scanTargetUser]);
 
   const handleSimulateDetectedQR = () => {
-    // Testing ke liye doosre user ka dummy mobile number pass karein
     processScannedData("9988776655");
   };
 
-  // 🟢 P2P Transfer with Proper Backend Sync
   const handleExecuteScanTransfer = async (e) => {
     e.preventDefault();
     const trAmt = parseFloat(scanAmount);
