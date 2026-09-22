@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema({
     name: { type: String, default: "Arena Player" },
     email: { type: String, unique: true },
     mobile: { type: String, default: "" },
-    walletBalance: { type: Number, default: 0.00 }, // 🟢 Default 0 balance
+    walletBalance: { type: Number, default: 0.00 },
     timestamp: { type: Date, default: Date.now }
 });
 const User = mongoose.model('User', userSchema);
@@ -83,7 +83,7 @@ app.get('/', (req, res) => {
   res.send('Win Arena Backend API is active!');
 });
 
-// User Balance Get API (Taaki frontend directly accurate balance fetch kar sake)
+// User Balance Get API
 app.get('/api/user/balance', async (req, res) => {
     try {
         const { email } = req.query;
@@ -100,7 +100,7 @@ app.get('/api/user/balance', async (req, res) => {
     }
 });
 
-// 🟢 User Register / Sync API (Naye user ko database mein 0 balance ke sath save karne ke liye)
+// User Register / Sync API
 app.post('/api/user/register', async (req, res) => {
     try {
         const { name, email, mobile } = req.body;
@@ -114,7 +114,7 @@ app.post('/api/user/register', async (req, res) => {
                 name: name || "Arena Player",
                 email: email,
                 mobile: mobile || "",
-                walletBalance: 0.00 // Naye user ka balance hamesha 0.00 rahega
+                walletBalance: 0.00
             });
             await user.save();
         }
@@ -126,77 +126,39 @@ app.post('/api/user/register', async (req, res) => {
     }
 });
 
-
-// ---------------- TOURNAMENT APIs ----------------
-
-app.get('/api/tournaments', async (req, res) => {
+// 🟢 Dedicated Add Money / Deposit API Route (FIXED)
+app.post('/api/wallet/add', async (req, res) => {
     try {
-        const tournaments = await Tournament.find().sort({ timestamp: -1 });
-        res.json({ success: true, tournaments });
-    } catch (err) {
-        console.error("Fetch tournaments error:", err);
-        res.status(500).json({ success: false, message: "Server error while fetching tournaments" });
-    }
-});
+        const { email, amount } = req.body;
+        const addAmount = parseFloat(amount);
 
-app.post('/api/tournaments', async (req, res) => {
-    try {
-        const { game, mode, entry, prize, totalSlots, slots, startTime } = req.body;
-        
-        const newTournament = new Tournament({
-            game,
-            mode,
-            entry,
-            prize,
-            slots: totalSlots || slots || 10,
-            startTime,
-            roomId: "",
-            roomPass: ""
+        if (!addAmount || addAmount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid amount!" });
+        }
+
+        let user = await User.findOne({ email: email || "user@winarena.com" });
+        if (!user) {
+            user = new User({
+                email: email || "user@winarena.com",
+                walletBalance: 0.00
+            });
+        }
+
+        user.walletBalance = parseFloat((user.walletBalance + addAmount).toFixed(2));
+        await user.save();
+
+        res.json({ 
+            success: true, 
+            message: "Money added successfully!", 
+            newBalance: user.walletBalance 
         });
-
-        await newTournament.save();
-        res.status(201).json({ success: true, message: "Tournament created successfully!", tournament: newTournament });
     } catch (err) {
-        console.error("Error creating tournament:", err);
-        res.status(500).json({ success: false, message: "Server error while creating tournament" });
+        console.error("Add money error:", err);
+        res.status(500).json({ success: false, message: "Server error during deposit" });
     }
 });
 
-app.post('/api/tournaments/room', async (req, res) => {
-    try {
-        const { tournamentId, roomId, roomPass } = req.body;
-        const updated = await Tournament.findByIdAndUpdate(
-            tournamentId,
-            { roomId, roomPass },
-            { new: true }
-        );
-
-        if (!updated) {
-            return res.status(404).json({ success: false, message: "Tournament not found" });
-        }
-
-        res.json({ success: true, message: "Room details published successfully!", updated });
-    } catch (err) {
-        console.error("Publish room error:", err);
-        res.status(500).json({ success: false, message: "Server error while publishing room details" });
-    }
-});
-
-app.delete('/api/tournaments/:id', async (req, res) => {
-    try {
-        const deleted = await Tournament.findByIdAndDelete(req.params.id);
-        if (!deleted) {
-            return res.status(404).json({ success: false, message: "Tournament not found" });
-        }
-        res.json({ success: true, message: "Tournament deleted successfully!" });
-    } catch (err) {
-        console.error("Delete tournament error:", err);
-        res.status(500).json({ success: false, message: "Server error during deletion" });
-    }
-});
-
-
-// ---------------- P2P WALLET TRANSFER API (Fully Fixed, 0 Default, No Duplicate Crashes) ----------------
+// P2P Wallet Transfer API
 app.post('/api/transfer', async (req, res) => {
     try {
         const { senderEmail, recipientMobile, amount } = req.body;
@@ -209,36 +171,32 @@ app.post('/api/transfer', async (req, res) => {
         const validSenderEmail = senderEmail || "user@winarena.com";
         const cleanRecipientMobile = (recipientMobile || "").trim();
 
-        // 1. Sender dhoondein
         let sender = await User.findOne({ email: validSenderEmail });
         if (!sender) {
             sender = new User({
                 name: validSenderEmail.split('@')[0],
                 email: validSenderEmail,
                 mobile: "8857824607",
-                walletBalance: 100.00 // Naye sender ko initial balance testing ke liye
+                walletBalance: 100.00
             });
             await sender.save();
         }
 
-        // 2. Recipient dhoondein (Default 0.00 - Never 500!)
         let recipient = await User.findOne({ mobile: cleanRecipientMobile });
         if (!recipient) {
             recipient = new User({
                 name: `User_${cleanRecipientMobile.slice(-4) || "Player"}`,
                 email: `${cleanRecipientMobile || Date.now()}@winarena.com`,
                 mobile: cleanRecipientMobile,
-                walletBalance: 0.00 // 🟢 Fixed: Naye user ko 0 balance milega!
+                walletBalance: 0.00
             });
             await recipient.save();
         }
 
-        // Khud ko transfer rokna
         if (sender.mobile && cleanRecipientMobile && sender.mobile === cleanRecipientMobile) {
             return res.status(400).json({ success: false, message: "Cannot transfer money to your own account!" });
         }
 
-        // Balance check
         if (sender.walletBalance < trAmount) {
             return res.status(400).json({ 
                 success: false, 
@@ -246,7 +204,6 @@ app.post('/api/transfer', async (req, res) => {
             });
         }
 
-        // 3. Sender se minus aur Recipient mein exact transfer amount add
         sender.walletBalance = parseFloat((sender.walletBalance - trAmount).toFixed(2));
         recipient.walletBalance = parseFloat((recipient.walletBalance + trAmount).toFixed(2));
 
@@ -264,9 +221,6 @@ app.post('/api/transfer', async (req, res) => {
         res.status(500).json({ success: false, message: "Server error during P2P transfer: " + err.message });
     }
 });
-
-
-// ---------------- PAYMENT & WITHDRAWAL APIs ----------------
 
 app.post('/api/create-order', async (req, res) => {
     try {
@@ -306,68 +260,5 @@ app.post('/api/verify-payment', async (req, res) => {
     } catch (err) {
         console.error("Payment Verification Error:", err);
         res.status(500).json({ success: false, message: "Server error" });
-    }
-});
-
-app.post('/api/withdraw', async (req, res) => {
-    try {
-        const { userId, userEmail, amount, method, details } = req.body;
-        if (!amount || amount < 10) {
-            return res.status(400).json({ success: false, message: "Minimum withdrawal is ₹10" });
-        }
-
-        const commission = amount * 0.025;
-        const finalPayout = amount - commission;
-
-        const earningRecord = new AdminEarning({
-            userId,
-            userEmail,
-            withdrawalAmount: amount,
-            commissionAmount: commission,
-            finalPayout,
-            method,
-            details: details || {},
-            status: "Pending"
-        });
-        await earningRecord.save();
-
-        res.json({
-            success: true,
-            message: "Withdrawal processed successfully",
-            requestedAmount: amount,
-            commissionDeducted: commission,
-            payoutToUser: finalPayout
-        });
-    } catch (err) {
-        console.error("Withdrawal error:", err);
-        res.status(500).json({ success: false, message: "Server error during withdrawal" });
-    }
-});
-
-app.get('/api/admin/withdrawals', async (req, res) => {
-    try {
-        const withdrawals = await AdminEarning.find().sort({ timestamp: -1 });
-        res.json({ success: true, withdrawals });
-    } catch (err) {
-        console.error("Fetch withdrawals error:", err);
-        res.status(500).json({ success: false, message: "Server error while fetching withdrawals" });
-    }
-});
-
-app.post('/api/admin/approve-withdrawal', async (req, res) => {
-    try {
-        const { id } = req.body;
-        const updated = await AdminEarning.findByIdAndUpdate(
-            id, 
-            { status: "Approved" }, 
-            { new: true }
-        );
-        if (!updated) {
-            return res.status(404).json({ success: false, message: "Request not found" });
-        }
-        res.json({ success: true, message: "Withdrawal approved successfully", updated });
-    } catch (err) {
-        console.error("Approval error:", err);
-        res.status(500).json({ success: false, message: "Server error during approval" });
     }
 });
