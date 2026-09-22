@@ -100,7 +100,7 @@ app.get('/api/user/balance', async (req, res) => {
     }
 });
 
-// 🟢 User Search / Verify API (Scanner ke liye real user details fetch karne ke liye)
+// 🟢 User Search / Verify API (Scanner ke liye real registered name & mobile fetch karne ke liye)
 app.get('/api/user/search', async (req, res) => {
     try {
         const { mobile } = req.query;
@@ -126,7 +126,7 @@ app.get('/api/user/search', async (req, res) => {
     }
 });
 
-// User Register / Sync API
+// User Register / Sync API (Real Name & Mobile save karne ke liye)
 app.post('/api/user/register', async (req, res) => {
     try {
         const { name, email, mobile } = req.body;
@@ -142,6 +142,10 @@ app.post('/api/user/register', async (req, res) => {
                 mobile: mobile || "",
                 walletBalance: 0.00
             });
+            await user.save();
+        } else {
+            if (name) user.name = name;
+            if (mobile) user.mobile = mobile;
             await user.save();
         }
 
