@@ -149,7 +149,7 @@ export default function ArenaWallet() {
     processScannedData("9876543210");
   };
 
-  // 🟢 Robust P2P Transfer with Fallback to Local Sync (No Server Errors)
+  // 🟢 Updated P2P Transfer with Real Backend Balance Sync
   const handleExecuteScanTransfer = async (e) => {
     e.preventDefault();
     const trAmt = parseFloat(scanAmount);
@@ -164,8 +164,6 @@ export default function ArenaWallet() {
       return;
     }
 
-    let transferSuccess = false;
-
     try {
       const res = await fetch(`${API_URL}/api/transfer`, {
         method: 'POST',
@@ -177,42 +175,39 @@ export default function ArenaWallet() {
         })
       });
       const data = await res.json();
+
       if (data.success) {
-        transferSuccess = true;
+        // Backend se aaya hua exact updated balance set karein
+        const newBalance = data.senderNewBalance !== undefined ? data.senderNewBalance : (balance - trAmt);
+        setBalance(newBalance);
+        localStorage.setItem("walletBalance", newBalance.toFixed(2));
+
+        const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
+        const currentDateTime = new Date().toLocaleString();
+
+        const historyItem = { 
+          type: `Paid to ${scanTargetUser.name}`, 
+          amount: -trAmt, 
+          time: currentDateTime, 
+          txnId: uniqueTxnId,
+          recipientMobile: scanTargetUser.mobile,
+          status: "Success" 
+        };
+
+        const updatedHistory = [historyItem, ...history];
+        setHistory(updatedHistory);
+        localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
+
+        alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nTxn ID: ${uniqueTxnId} ⚡`);
+        setShowScannerModal(false);
+        setScanTargetUser(null);
+        setScanAmount("");
+      } else {
+        alert(data.message || "Transfer failed from server!");
       }
     } catch (err) {
-      console.log("Backend offline/error, falling back to local simulation transfer:", err);
-      // Fallback local execution so app never shows server error
-      transferSuccess = true;
-    }
-
-    if (transferSuccess) {
-      const newBalance = balance - trAmt;
-      setBalance(newBalance);
-      localStorage.setItem("walletBalance", newBalance.toFixed(2));
-
-      const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
-      const currentDateTime = new Date().toLocaleString();
-
-      const historyItem = { 
-        type: `Paid to ${scanTargetUser.name}`, 
-        amount: -trAmt, 
-        time: currentDateTime, 
-        txnId: uniqueTxnId,
-        recipientMobile: scanTargetUser.mobile,
-        status: "Success" 
-      };
-
-      const updatedHistory = [historyItem, ...history];
-      setHistory(updatedHistory);
-      localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
-
-      alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nTxn ID: ${uniqueTxnId} ⚡`);
-      setShowScannerModal(false);
-      setScanTargetUser(null);
-      setScanAmount("");
-    } else {
-      alert("Transfer failed. Please try again.");
+      console.error("Transfer network error:", err);
+      alert("Server error during P2P transfer process. Please check your internet connection.");
     }
   };
 
