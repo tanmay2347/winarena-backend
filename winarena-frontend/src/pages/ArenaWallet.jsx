@@ -33,6 +33,9 @@ export default function ArenaWallet() {
   const [bankDetails, setBankDetails] = useState({ accNo: "", ifsc: "", name: "" });
   const [paytmNumber, setPaytmNumber] = useState("");
 
+  const API_URL = "https://winarena-backend-1.onrender.com";
+  const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
+
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
@@ -62,7 +65,7 @@ export default function ArenaWallet() {
       const parsedArena = JSON.parse(savedArena);
       setUserArenaInfo({ ...parsedArena, name: profileName, mobile: profileMobile });
     } else {
-      setUserArenaInfo({ name: profileName, mobile: profileMobile, qrCodeText: "WINARENA-P2P-WALLET", email: "user@winarena.com" });
+      setUserArenaInfo({ name: profileName, mobile: profileMobile, qrCodeText: "WINARENA-P2P-WALLET", email: userEmail });
     }
 
     const savedHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
@@ -151,7 +154,8 @@ export default function ArenaWallet() {
     processScannedData("8857824607");
   };
 
-  const handleExecuteScanTransfer = (e) => {
+  // 🟢 Real-time Backend P2P Transfer API Integration
+  const handleExecuteScanTransfer = async (e) => {
     e.preventDefault();
     const trAmt = parseFloat(scanAmount);
     if (!trAmt || trAmt <= 0) {
@@ -165,42 +169,50 @@ export default function ArenaWallet() {
       return;
     }
 
-    // Sender balance deduction
-    const newBalance = balance - trAmt;
-    setBalance(newBalance);
-    localStorage.setItem("walletBalance", newBalance.toFixed(2));
+    try {
+      const res = await fetch(`${API_URL}/api/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderEmail: userEmail,
+          recipientMobile: scanTargetUser.mobile,
+          amount: trAmt
+        })
+      });
+      const data = await res.json();
 
-    const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
-    const currentDateTime = new Date().toLocaleString();
+      if (data.success) {
+        const newBalance = balance - trAmt;
+        setBalance(newBalance);
+        localStorage.setItem("walletBalance", newBalance.toFixed(2));
 
-    const historyItem = { 
-      type: `Paid to ${scanTargetUser.name}`, 
-      amount: -trAmt, 
-      time: currentDateTime, 
-      txnId: uniqueTxnId,
-      recipientMobile: scanTargetUser.mobile,
-      status: "Success" 
-    };
+        const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
+        const currentDateTime = new Date().toLocaleString();
 
-    const updatedHistory = [historyItem, ...history];
-    setHistory(updatedHistory);
-    localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
+        const historyItem = { 
+          type: `Paid to ${scanTargetUser.name}`, 
+          amount: -trAmt, 
+          time: currentDateTime, 
+          txnId: uniqueTxnId,
+          recipientMobile: scanTargetUser.mobile,
+          status: "Success" 
+        };
 
-    // 🟢 Receiver (Scanner holder) account credit simulation for local sync
-    const receiverHistoryItem = {
-      type: `Received from P2P`,
-      amount: trAmt,
-      time: currentDateTime,
-      txnId: uniqueTxnId,
-      status: "Success"
-    };
-    const existingReceiverHistory = JSON.parse(localStorage.getItem("walletHistory")) || [];
-    localStorage.setItem("walletHistory", JSON.stringify([receiverHistoryItem, ...existingReceiverHistory]));
+        const updatedHistory = [historyItem, ...history];
+        setHistory(updatedHistory);
+        localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
 
-    alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nTxn ID: ${uniqueTxnId} ⚡`);
-    setShowScannerModal(false);
-    setScanTargetUser(null);
-    setScanAmount("");
+        alert(`Successfully transferred ₹${trAmt} to ${scanTargetUser.name}!\nTxn ID: ${uniqueTxnId} ⚡`);
+        setShowScannerModal(false);
+        setScanTargetUser(null);
+        setScanAmount("");
+      } else {
+        alert(data.message || "Transfer failed from server!");
+      }
+    } catch (err) {
+      console.error("Transfer network error:", err);
+      alert("Server error during P2P transfer process.");
+    }
   };
 
   const handleAddMoney = (e) => {
