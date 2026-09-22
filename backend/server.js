@@ -100,6 +100,32 @@ app.get('/api/user/balance', async (req, res) => {
     }
 });
 
+// 🟢 User Search / Verify API (Scanner ke liye real user details fetch karne ke liye)
+app.get('/api/user/search', async (req, res) => {
+    try {
+        const { mobile } = req.query;
+        if (!mobile) return res.status(400).json({ success: false, message: "Mobile number required" });
+
+        const user = await User.findOne({ mobile: mobile.trim() });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found with this mobile number!" });
+        }
+
+        res.json({
+            success: true,
+            user: {
+                name: user.name,
+                mobile: user.mobile,
+                email: user.email,
+                balance: user.walletBalance
+            }
+        });
+    } catch (err) {
+        console.error("Search user error:", err);
+        res.status(500).json({ success: false, message: "Server error during user search" });
+    }
+});
+
 // User Register / Sync API
 app.post('/api/user/register', async (req, res) => {
     try {
@@ -329,6 +355,6 @@ app.post('/api/verify-payment', async (req, res) => {
         }
     } catch (err) {
         console.error("Payment Verification Error:", err);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ status: false, message: "Server error" });
     }
 });
