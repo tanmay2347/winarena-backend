@@ -55,25 +55,24 @@ export default function TournamentDetail() {
     localStorage.setItem("userGameId", gameId.trim());
     localStorage.setItem("userGameUsername", gameUsername.trim());
 
-    // Strict Wallet Balance Check & Deduct via Backend API
-    let walletBalance = parseFloat(localStorage.getItem("walletBalance"));
-    if (isNaN(walletBalance)) {
-      walletBalance = 0;
-      localStorage.setItem("walletBalance", "0");
-    }
-
     const entryFee = parseFloat(tournament.entry) || 0;
 
-    // 🔴 1. Insufficient Balance Protection
-    if (walletBalance < entryFee) {
-      alert(`⚠️ Insufficient Balance!\n\nYou need ₹${entryFee} to join this tournament, but your wallet has ₹${walletBalance}. Please add money.`);
-      navigate("/wallet");
-      return;
-    }
-
-    const tournamentId = tournament._id || tournament.id;
-
     try {
+      // 🟢 Pehle server se live balance check karein taaki sync error na aaye
+      const balanceRes = await fetch(`${API_URL}/api/user/balance?email=${encodeURIComponent(userEmail)}`);
+      const balanceData = await balanceRes.json();
+
+      let liveBalance = (balanceData.success && balanceData.balance !== undefined) 
+        ? balanceData.balance 
+        : parseFloat(localStorage.getItem("walletBalance") || "0");
+
+      // 🔴 1. Insufficient Balance Protection
+      if (liveBalance < entryFee) {
+        alert(`⚠️ Insufficient Balance!\n\nYou need ₹${entryFee} to join this tournament, but your live balance is ₹${liveBalance}. Please add money.`);
+        navigate("/wallet");
+        return;
+      }
+
       // Deduct entry fee from backend wallet database
       const deductRes = await fetch(`${API_URL}/api/wallet/deduct`, {
         method: 'POST',
@@ -87,9 +86,11 @@ export default function TournamentDetail() {
         return;
       }
 
-      // Update local wallet balance state
-      walletBalance = deductData.newBalance;
-      localStorage.setItem("walletBalance", walletBalance.toFixed(2));
+      // Update local wallet balance state & storage
+      liveBalance = deductData.newBalance;
+      localStorage.setItem("walletBalance", liveBalance.toFixed(2));
+
+      const tournamentId = tournament._id || tournament.id;
 
       // 🟢 Send join details to backend with Game ID & Username for Admin panel list
       const joinRes = await fetch(`${API_URL}/api/tournaments/join`, {
