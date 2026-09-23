@@ -135,6 +135,14 @@ export default function TournamentDetail() {
 
   const isFull = tournament.registeredUsers && tournament.registeredUsers.length >= (tournament.totalSlots || tournament.slots);
 
+  // Safely parse start time for display
+  const parsedStartTime = tournament.startTime 
+    ? (!isNaN(tournament.startTime) ? new Date(Number(tournament.startTime)) : new Date(tournament.startTime))
+    : null;
+  const formattedDateTime = parsedStartTime && !isNaN(parsedStartTime.getTime())
+    ? parsedStartTime.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : "TBA";
+
   return (
     <div style={{ padding: "20px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto" }}>
       
@@ -162,11 +170,11 @@ export default function TournamentDetail() {
           </h1>
           {/* 🟢 Live Green Box with Date & Time Side Box */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ background: "rgba(255,255,255,0.1)", color: "#fbbf24", fontSize: "9px", fontWeight: "800", padding: "4px 8px", borderRadius: "6px", border: "1px solid rgba(251,191,36,0.3)" }}>
+              🕒 {formattedDateTime}
+            </span>
             <span style={{ background: isFull ? "#ef4444" : "#22c55e", color: "#fff", fontSize: "9px", fontWeight: "800", padding: "4px 8px", borderRadius: "6px" }}>
               {isFull ? "● FULL" : "● LIVE"}
-            </span>
-            <span style={{ background: "rgba(255,255,255,0.1)", color: "#fbbf24", fontSize: "9px", fontWeight: "800", padding: "4px 8px", borderRadius: "6px", border: "1px solid rgba(251,191,36,0.3)" }}>
-              🕒 {tournament.startTime ? new Date(tournament.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Soon"}
             </span>
           </div>
         </div>
@@ -186,7 +194,7 @@ export default function TournamentDetail() {
           </div>
           <div>
             <span style={{ color: "#9ca3af", fontSize: "10px", display: "block" }}>MATCH TIME</span>
-            <strong style={{ color: "#cbd5e1", fontSize: "12px" }}>{tournament.startTime ? new Date(tournament.startTime).toLocaleString() : "TBA"}</strong>
+            <strong style={{ color: "#cbd5e1", fontSize: "12px" }}>{formattedDateTime}</strong>
           </div>
         </div>
 

@@ -21,7 +21,7 @@ export default function Tournaments() {
 
         const joined = allTournaments.filter((t) => {
           const isLocallyJoined = localJoinedIds.includes(t._id || t.id);
-          const isRegisteredInDb = t.registeredUsers && (t.registeredUsers.includes(userName) || t.registeredUsers.includes(userEmail));
+          const isRegisteredInDb = t.registeredUsers && t.registeredUsers.some(u => u.email === userEmail || u.name === userName);
           return isLocallyJoined || isRegisteredInDb;
         });
 
@@ -59,7 +59,7 @@ export default function Tournaments() {
           MY JOINED TOURNAMENTS
         </h1>
         <p style={{ color: "#9ca3af", fontSize: "12px", margin: 0 }}>
-          Aapke sabhi registered matches aur room details yahan show honge (Live Synced).
+          Aapke sabhi registered matches aur room details yahan honge (Live Synced).
         </p>
       </div>
 
@@ -97,13 +97,14 @@ export default function Tournaments() {
   );
 }
 
-// Fixed card component with bulletproof live countdown timer
+// Fixed card component with bulletproof live countdown timer & date formatting
 function JoinedTournamentCard({ tournament }) {
   const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
     const calculateTime = () => {
-      const startTimeMs = new Date(tournament.startTime).getTime();
+      // Safely parse start time (handles both number timestamps and date strings)
+      const startTimeMs = !isNaN(tournament.startTime) ? Number(tournament.startTime) : new Date(tournament.startTime).getTime();
       
       if (!startTimeMs || isNaN(startTimeMs)) {
         setTimeLeft("INVALID TIME");
@@ -131,6 +132,11 @@ function JoinedTournamentCard({ tournament }) {
     return () => clearInterval(interval);
   }, [tournament.startTime]);
 
+  // Format date safely for display
+  const formattedDate = tournament.startTime 
+    ? (!isNaN(tournament.startTime) ? new Date(Number(tournament.startTime)) : new Date(tournament.startTime)).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : "TBA";
+
   return (
     <div style={{ 
       background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", 
@@ -145,9 +151,14 @@ function JoinedTournamentCard({ tournament }) {
         <h3 style={{ fontSize: "14px", color: "#fff", margin: 0, fontWeight: "800" }}>
           {tournament.game} - {tournament.mode}
         </h3>
-        <span style={{ background: "#22c55e", color: "#fff", fontSize: "8px", fontWeight: "800", padding: "3px 8px", borderRadius: "4px" }}>
-          ● REGISTERED
-        </span>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <span style={{ background: "rgba(255,255,255,0.1)", color: "#fbbf24", fontSize: "8px", fontWeight: "800", padding: "3px 6px", borderRadius: "4px", border: "1px solid rgba(251,191,36,0.3)" }}>
+            📅 {formattedDate}
+          </span>
+          <span style={{ background: "#22c55e", color: "#fff", fontSize: "8px", fontWeight: "800", padding: "3px 8px", borderRadius: "4px" }}>
+            ● REGISTERED
+          </span>
+        </div>
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", margin: "4px 0" }}>
