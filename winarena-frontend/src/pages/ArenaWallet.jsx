@@ -104,7 +104,6 @@ export default function ArenaWallet() {
     }
   };
 
-  // 🟢 FIXED: Scanner ab database se exact registered user ka naam aur mobile fetch karega
   const processScannedData = async (scannedText) => {
     const targetMobile = (scannedText && scannedText.length >= 10) ? scannedText.trim() : "";
     
@@ -292,6 +291,7 @@ export default function ArenaWallet() {
     }
   };
 
+  // 🟢 FIXED: Withdrawal ab dedicated /api/withdraw route ko call karega jo admin panel mein pending request bhejega
   const handleWithdraw = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
@@ -307,13 +307,20 @@ export default function ArenaWallet() {
       return;
     }
 
+    let withdrawalDetails = {};
+    if (withdrawMethod === "UPI") withdrawalDetails = { upiId };
+    else if (withdrawMethod === "Paytm") withdrawalDetails = { paytmNumber };
+    else if (withdrawMethod === "Bank") withdrawalDetails = bankDetails;
+
     try {
-      const res = await fetch(`${API_URL}/api/wallet/deduct`, {
+      const res = await fetch(`${API_URL}/api/withdraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: userEmail,
-          amount: amt
+          amount: amt,
+          method: withdrawMethod,
+          details: withdrawalDetails
         })
       });
       const data = await res.json();
@@ -329,7 +336,7 @@ export default function ArenaWallet() {
           amount: -amt, 
           time: new Date().toLocaleString(), 
           txnId: uniqueTxnId,
-          status: "Success" 
+          status: "Pending" 
         };
 
         const updatedHistory = [newHistoryItem, ...history];
@@ -338,7 +345,7 @@ export default function ArenaWallet() {
 
         setAmount("");
         setActionType(null);
-        alert(`Withdrawal Successful via ${withdrawMethod}!\nTxn ID: ${uniqueTxnId}`);
+        alert(`Withdrawal Request Submitted via ${withdrawMethod}!\nTxn ID: ${uniqueTxnId}`);
       } else {
         alert(data.message || "Withdrawal failed!");
       }
@@ -470,7 +477,7 @@ export default function ArenaWallet() {
                   <strong style={{ fontSize: "14px", color: isPositive ? "#22c55e" : "#ef4444", fontWeight: "900" }}>
                     {isPositive ? `+₹${item.amount}` : `-₹${Math.abs(item.amount)}`}
                   </strong>
-                  <span style={{ fontSize: "8px", display: "block", color: "#22c55e", background: "rgba(34,197,94,0.1)", padding: "1px 4px", borderRadius: "4px", marginTop: "2px" }}>{item.status}</span>
+                  <span style={{ fontSize: "8px", display: "block", color: item.status === "Pending" ? "#fbbf24" : "#22c55e", background: item.status === "Pending" ? "rgba(251,191,36,0.1)" : "rgba(34,197,94,0.1)", padding: "1px 4px", borderRadius: "4px", marginTop: "2px" }}>{item.status}</span>
                 </div>
               </div>
             );

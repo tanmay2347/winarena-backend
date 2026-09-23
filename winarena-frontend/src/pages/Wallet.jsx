@@ -36,14 +36,28 @@ export default function Wallet() {
       return;
     }
 
-    const savedBalance = localStorage.getItem("walletBalance");
-    if (savedBalance !== null) {
-      setBalance(parseFloat(savedBalance));
-    } else {
-      // 🟢 Admin ya user ke liye default 500 trial balance set kar diya hai
-      localStorage.setItem("walletBalance", "500.00");
-      setBalance(500.00);
-    }
+    // 🟢 Backend se live balance fetch karein taaki sync error na aaye
+    fetch(`${API_URL}/api/user/balance?email=${encodeURIComponent(userEmail)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.balance !== undefined) {
+          setBalance(data.balance);
+          localStorage.setItem("walletBalance", data.balance.toFixed(2));
+        } else {
+          const savedBalance = localStorage.getItem("walletBalance");
+          if (savedBalance !== null) {
+            setBalance(parseFloat(savedBalance));
+          } else {
+            localStorage.setItem("walletBalance", "500.00");
+            setBalance(500.00);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Balance fetch error:", err);
+        const savedBalance = localStorage.getItem("walletBalance");
+        if (savedBalance !== null) setBalance(parseFloat(savedBalance));
+      });
 
     const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
     let withdrawnSum = 0;
@@ -58,7 +72,7 @@ export default function Wallet() {
     if (savedArena) {
       setHasArenaAccount(true);
     }
-  }, [navigate]);
+  }, [navigate, userEmail]);
 
   const handleAddMoney = async (e) => {
     e.preventDefault();
@@ -68,30 +82,42 @@ export default function Wallet() {
       return;
     }
 
-    const completeDeposit = (methodName, refId) => {
-      const newBalance = balance + amt;
-      setBalance(newBalance);
-      localStorage.setItem("walletBalance", newBalance.toFixed(2));
-      
-      const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
-      const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
-      history.unshift({ 
-        type: `Deposit via ${methodName}`, 
-        amount: amt, 
-        time: new Date().toLocaleString(), 
-        txnId: uniqueTxnId, 
-        gatewayId: refId,
-        status: "Success" 
-      });
-      localStorage.setItem("walletHistory", JSON.stringify(history));
+    const completeDeposit = async (methodName, refId) => {
+      try {
+        const res = await fetch(`${API_URL}/api/wallet/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: userEmail, amount: amt })
+        });
+        const data = await res.json();
 
-      setAmount("");
-      setPopupData({
-        title: "Deposit Successful! 🎉",
-        message: `Successfully added ₹${amt} to your wallet.`,
-        txnId: uniqueTxnId,
-        subtext: "Funds updated instantly."
-      });
+        const newBalance = (data.success && data.newBalance !== undefined) ? data.newBalance : (balance + amt);
+        setBalance(newBalance);
+        localStorage.setItem("walletBalance", newBalance.toFixed(2));
+        
+        const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
+        const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
+        history.unshift({ 
+          type: `Deposit via ${methodName}`, 
+          amount: amt, 
+          time: new Date().toLocaleString(), 
+          txnId: uniqueTxnId, 
+          gatewayId: refId,
+          status: "Success" 
+        });
+        localStorage.setItem("walletHistory", JSON.stringify(history));
+
+        setAmount("");
+        setPopupData({
+          title: "Deposit Successful! 🎉",
+          message: `Successfully added ₹${amt} to your wallet.`,
+          txnId: uniqueTxnId,
+          subtext: "Funds updated instantly."
+        });
+      } catch (err) {
+        console.error("Backend deposit sync error:", err);
+        alert("Payment successful but failed to update backend balance.");
+      }
     };
 
     try {
@@ -191,8 +217,7 @@ export default function Wallet() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: "user_123",
-          userEmail: userEmail,
+          email: userEmail,
           amount: amt,
           method: withdrawMethod,
           details: payoutDetails
@@ -201,7 +226,7 @@ export default function Wallet() {
       const data = await res.json();
 
       if (data.success) {
-        const newBalance = balance - amt;
+        const newBalance = data.newBalance !== undefined ? data.newBalance : (balance - amt);
         setBalance(newBalance);
         localStorage.setItem("walletBalance", newBalance.toFixed(2));
 
@@ -216,8 +241,8 @@ export default function Wallet() {
         setAmount("");
         setPopupData({
           title: "Withdrawal Request Submitted! 🚀",
-          message: `Requested: ₹${amt} (Fee: ₹${data.commissionDeducted?.toFixed(2) || 0})`,
-          payout: `Final Payout: ₹${data.payoutToUser?.toFixed(2) || amt}`,
+          message: `Requested: ₹${amt} (Fee: ₹${data.commissionAmount?.toFixed(2) || 0})`,
+          payout: `Final Payout: ₹${data.finalPayout?.toFixed(2) || amt}`,
           txnId: uniqueTxnId,
           subtext: "Money will be credited to your account within 24 hours!"
         });
