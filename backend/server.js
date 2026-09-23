@@ -100,7 +100,7 @@ app.get('/api/user/balance', async (req, res) => {
     }
 });
 
-// 🟢 User Search / Verify API (Scanner ke liye real registered name & mobile fetch karne ke liye)
+// User Search / Verify API
 app.get('/api/user/search', async (req, res) => {
     try {
         const { mobile } = req.query;
@@ -126,7 +126,7 @@ app.get('/api/user/search', async (req, res) => {
     }
 });
 
-// User Register / Sync API (Real Name & Mobile save karne ke liye)
+// User Register / Sync API
 app.post('/api/user/register', async (req, res) => {
     try {
         const { name, email, mobile } = req.body;
@@ -188,7 +188,7 @@ app.post('/api/wallet/add', async (req, res) => {
     }
 });
 
-// 🟢 Dedicated Deduct / Spend Money API (For Activation, Tournament Entry, etc.)
+// Dedicated Deduct / Spend Money API
 app.post('/api/wallet/deduct', async (req, res) => {
     try {
         const { email, amount } = req.body;
@@ -254,6 +254,70 @@ app.post('/api/tournaments', async (req, res) => {
     } catch (err) {
         console.error("Error creating tournament:", err);
         res.status(500).json({ success: false, message: "Server error while creating tournament" });
+    }
+});
+
+// 🟢 Tournament Join API (Game ID aur Username ke sath)
+app.post('/api/tournaments/join', async (req, res) => {
+    try {
+        const { tournamentId, userEmail, userName, gameId, gameUsername } = req.body;
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) {
+            return res.status(404).json({ success: false, message: "Tournament not found!" });
+        }
+
+        const alreadyJoined = tournament.registeredUsers.some(u => u.email === userEmail);
+        if (alreadyJoined) {
+            return res.status(400).json({ success: false, message: "You have already joined this tournament!" });
+        }
+
+        if (tournament.registeredUsers.length >= tournament.slots) {
+            return res.status(400).json({ success: false, message: "Tournament is full!" });
+        }
+
+        tournament.registeredUsers.push({
+            email: userEmail,
+            name: userName || "Player",
+            gameId: gameId || "",
+            gameUsername: gameUsername || "",
+            timestamp: new Date()
+        });
+
+        await tournament.save();
+        res.json({ success: true, message: "Tournament joined successfully!", tournament });
+    } catch (err) {
+        console.error("Join tournament error:", err);
+        res.status(500).json({ success: false, message: "Server error while joining tournament" });
+    }
+});
+
+// 🟢 Admin Pay Winner API (Admin panel se winner ke wallet me prize add karne ke liye)
+app.post('/api/admin/pay-winner', async (req, res) => {
+    try {
+        const { userEmail, prizeAmount } = req.body;
+        const winAmount = parseFloat(prizeAmount);
+
+        if (!winAmount || winAmount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid prize amount!" });
+        }
+
+        let user = await User.findOne({ email: userEmail });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found!" });
+        }
+
+        user.walletBalance = parseFloat((user.walletBalance + winAmount).toFixed(2));
+        await user.save();
+
+        res.json({
+            success: true,
+            message: `Successfully added ₹${winAmount} to ${user.name}'s wallet!`,
+            newBalance: user.walletBalance
+        });
+    } catch (err) {
+        console.error("Pay winner error:", err);
+        res.status(500).json({ success: false, message: "Server error while paying winner" });
     }
 });
 
