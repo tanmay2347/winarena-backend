@@ -53,7 +53,7 @@ export default function GameDetail() {
       const updatedTimes = {};
       tournaments.forEach((t) => {
         const tId = t._id || t.id;
-        const startTimeMs = new Date(t.startTime).getTime() || t.startTime;
+        const startTimeMs = !isNaN(t.startTime) ? Number(t.startTime) : new Date(t.startTime).getTime();
         const diff = startTimeMs - now;
         
         if (diff <= 0) {
@@ -114,9 +114,17 @@ export default function GameDetail() {
             const localJoinedIds = JSON.parse(localStorage.getItem("myJoinedTournamentIds")) || [];
             const isLocallyJoined = localJoinedIds.includes(tournamentId);
             const isRegisteredInDb = tournament.registeredUsers && (
-              tournament.registeredUsers.includes(userName) || tournament.registeredUsers.includes(userEmail)
+              tournament.registeredUsers.includes(userName) || tournament.registeredUsers.includes(userEmail) || tournament.registeredUsers.some(u => u.email === userEmail || u.name === userName)
             );
             const isAlreadyJoined = isLocallyJoined || isRegisteredInDb;
+
+            // Safely format tournament start date and time
+            const parsedTime = tournament.startTime 
+              ? (!isNaN(tournament.startTime) ? new Date(Number(tournament.startTime)) : new Date(tournament.startTime))
+              : null;
+            const formattedDateBadge = parsedTime && !isNaN(parsedTime.getTime())
+              ? parsedTime.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+              : "TBA";
 
             return (
               <div 
@@ -133,9 +141,15 @@ export default function GameDetail() {
                   <h3 style={{ margin: 0, fontSize: "15px", color: "#fff", fontWeight: "900", textTransform: "uppercase" }}>
                     {tournament.game} – {tournament.mode}
                   </h3>
-                  <span style={{ background: "#22c55e", color: "#fff", fontSize: "9px", fontWeight: "900", padding: "3px 8px", borderRadius: "6px" }}>
-                    ● LIVE
-                  </span>
+                  {/* 🟢 Date/Time Badge placed strictly to the left of the LIVE indicator */}
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <span style={{ background: "rgba(255,255,255,0.1)", color: "#fbbf24", fontSize: "9px", fontWeight: "800", padding: "4px 8px", borderRadius: "6px", border: "1px solid rgba(251,191,36,0.3)" }}>
+                      🕒 {formattedDateBadge}
+                    </span>
+                    <span style={{ background: "#22c55e", color: "#fff", fontSize: "9px", fontWeight: "900", padding: "4px 8px", borderRadius: "6px" }}>
+                      ● LIVE
+                    </span>
+                  </div>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", fontSize: "12px" }}>
