@@ -79,6 +79,30 @@ export default function Admin() {
     }
   };
 
+  // 🟢 Admin Pay Winner Handler
+  const handlePayWinner = async (userEmail) => {
+    const amount = prompt("Enter prize amount to send to this player's wallet (₹):");
+    if (!amount || isNaN(amount) || Number(amount) <= 0) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/admin/pay-winner`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userEmail, prizeAmount: Number(amount) })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert(data.message || "Prize sent successfully! 🏆");
+      } else {
+        alert(data.message || "Failed to send prize.");
+      }
+    } catch (err) {
+      console.error("Pay winner error:", err);
+      alert("Server error while paying winner.");
+    }
+  };
+
   // 🟢 Create Tournament via Backend API
   const handleCreateTournament = async (e) => {
     e.preventDefault();
@@ -107,7 +131,7 @@ export default function Admin() {
       
       if (res.ok) {
         alert("Tournament Successfully Created & Live in Database! 🚀");
-        fetchTournaments(); // Refresh list from server
+        fetchTournaments();
         setMode("SOLO");
         setEntry("10");
         setPrize("500");
@@ -122,7 +146,7 @@ export default function Admin() {
     }
   };
 
-  // 🟢 Publish Room Credentials via Backend API (Fixed to use PUT /api/tournaments/:id)
+  // 🟢 Publish Room Credentials via Backend API
   const handlePublishRoom = async (id) => {
     const { roomId, roomPass } = roomData[id] || {};
     if (!roomId || !roomPass) {
@@ -195,7 +219,7 @@ export default function Admin() {
         {activeTab === "tournaments" ? "ADMIN PANEL - MANAGE TOURNAMENTS" : "ADMIN PANEL - USER WITHDRAWALS"}
       </h1>
       <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "20px" }}>
-        {activeTab === "tournaments" ? "Naye tournaments banayein, Room ID publish karein (MongoDB Connected)." : "Users dwara bheje gaye withdrawals ki date, time aur amount yahan dekhein aur approve karein."}
+        {activeTab === "tournaments" ? "Naye tournaments banayein, Room ID publish karein aur winner ko payout dein." : "Users dwara bheje gaye withdrawals ki date, time aur amount yahan dekhein aur approve karein."}
       </p>
 
       {/* CONDITIONAL RENDERING BASED ON TAB */}
@@ -255,7 +279,7 @@ export default function Admin() {
           </form>
 
           {/* PUBLISHED TOURNAMENTS */}
-          <h2 style={{ fontSize: "16px", color: "#fbbf24", marginBottom: "12px" }}>Manage Active Tournaments</h2>
+          <h2 style={{ fontSize: "16px", color: "#fbbf24", marginBottom: "12px" }}>Manage Active Tournaments & Players</h2>
           {tournaments.length === 0 ? (
             <p style={{ color: "#9ca3af", fontSize: "12px" }}>No tournaments created yet.</p>
           ) : (
@@ -272,6 +296,31 @@ export default function Admin() {
 
                     <div style={{ background: "rgba(251, 191, 36, 0.15)", color: "#fbbf24", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "800", display: "inline-block", marginBottom: "10px" }}>
                       📅 Match Time: {new Date(Number(t.startTime) || t.startTime).toLocaleString()}
+                    </div>
+
+                    {/* 🟢 REGISTERED PLAYERS LIST WITH PAY WINNER BUTTON */}
+                    <div style={{ background: "rgba(0,0,0,0.3)", padding: "10px", borderRadius: "8px", marginBottom: "12px", border: "1px dashed rgba(255,255,255,0.15)" }}>
+                      <span style={{ fontSize: "11px", color: "#c084fc", fontWeight: "900", display: "block", marginBottom: "6px" }}>👥 Registered Players & Winners Payout:</span>
+                      {(!t.registeredUsers || t.registeredUsers.length === 0) ? (
+                        <span style={{ fontSize: "10px", color: "#9ca3af" }}>No players joined yet.</span>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {t.registeredUsers.map((u, idx) => (
+                            <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.04)", padding: "6px 8px", borderRadius: "6px" }}>
+                              <div style={{ fontSize: "11px" }}>
+                                <strong style={{ color: "#fff" }}>{u.name || "Player"}</strong> ({u.email})
+                                <div style={{ fontSize: "9px", color: "#9ca3af" }}>Game ID: <span style={{ color: "#38bdf8" }}>{u.gameId || "N/A"}</span> | Username: <span style={{ color: "#38bdf8" }}>{u.gameUsername || "N/A"}</span></div>
+                              </div>
+                              <button 
+                                onClick={() => handlePayWinner(u.email)}
+                                style={{ background: "#22c55e", color: "#000", border: "none", padding: "4px 8px", borderRadius: "4px", fontSize: "10px", fontWeight: "900", cursor: "pointer" }}
+                              >
+                                🏆 Pay Winner
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>

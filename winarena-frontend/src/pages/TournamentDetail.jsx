@@ -6,10 +6,22 @@ export default function TournamentDetail() {
   const navigate = useNavigate();
   const [tournament, setTournament] = useState(null);
 
+  // 🟢 Game ID & Username State
+  const [gameId, setGameId] = useState("");
+  const [gameUsername, setGameUsername] = useState("");
+
   // 🟢 Live Backend URL Constant
   const API_URL = "https://winarena-backend-1.onrender.com";
+  const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
+  const userName = localStorage.getItem("userName") || "Player";
 
   useEffect(() => {
+    // Load saved Game ID and Username from localStorage if available
+    const savedGameId = localStorage.getItem("userGameId") || "";
+    const savedGameUsername = localStorage.getItem("userGameUsername") || "";
+    setGameId(savedGameId);
+    setGameUsername(savedGameUsername);
+
     // Fetch live tournaments from MongoDB Backend
     fetch(`${API_URL}/api/tournaments`)
       .then((res) => res.json())
@@ -19,7 +31,6 @@ export default function TournamentDetail() {
         if (found) {
           setTournament(found);
         } else {
-          // Fallback to local storage if not found on server
           const localStored = JSON.parse(localStorage.getItem("adminTournaments")) || [];
           const localFound = localStored.find((t) => t.id.toString() === id);
           if (localFound) setTournament(localFound);
@@ -33,10 +44,18 @@ export default function TournamentDetail() {
       });
   }, [id]);
 
-  const handleJoinConfirm = () => {
-    const currentUserName = localStorage.getItem("userName") || localStorage.getItem("userEmail") || "Gamer";
-    
-    // Strict Wallet Balance Check
+  const handleJoinConfirm = async () => {
+    // 🟢 Validation for Game ID and Username
+    if (!gameId.trim() || !gameUsername.trim()) {
+      alert("⚠️ Kripya apni Game ID aur Game Username enter karein!");
+      return;
+    }
+
+    // Save permanently in localStorage so user doesn't need to type again
+    localStorage.setItem("userGameId", gameId.trim());
+    localStorage.setItem("userGameUsername", gameUsername.trim());
+
+    // Strict Wallet Balance Check & Deduct via Backend API
     let walletBalance = parseFloat(localStorage.getItem("walletBalance"));
     if (isNaN(walletBalance)) {
       walletBalance = 0;
@@ -52,39 +71,57 @@ export default function TournamentDetail() {
       return;
     }
 
-    // 🔴 2. Already Joined Check
-    const registeredUsers = tournament.registeredUsers || [];
-    if (registeredUsers.includes(currentUserName)) {
-      alert("⚠️ You have already joined this tournament!");
-      return;
-    }
-
-    if (registeredUsers.length >= tournament.totalSlots) {
-      alert("⚠️ Sorry, slots are full!");
-      return;
-    }
-
-    // Deduct entry fee safely BEFORE saving
-    walletBalance -= entryFee;
-    localStorage.setItem("walletBalance", walletBalance.toFixed(2));
-
-    // Save joined tournament ID locally so 'Tournaments.jsx' can track it easily
-    const myJoinedIds = JSON.parse(localStorage.getItem("myJoinedTournamentIds")) || [];
     const tournamentId = tournament._id || tournament.id;
-    if (!myJoinedIds.includes(tournamentId)) {
-      myJoinedIds.push(tournamentId);
-      localStorage.setItem("myJoinedTournamentIds", JSON.stringify(myJoinedIds));
-    }
 
-    // Also support legacy local storage array
-    const myJoined = JSON.parse(localStorage.getItem("myJoinedTournaments")) || [];
-    if (!myJoined.some((item) => (item._id || item.id).toString() === id)) {
-      myJoined.push(tournament);
-      localStorage.setItem("myJoinedTournaments", JSON.stringify(myJoined));
-    }
+    try {
+      // Deduct entry fee from backend wallet database
+      const deductRes = await fetch(`${API_URL}/api/wallet/deduct`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, amount: entryFee })
+      });
+      const deductData = await deductRes.json();
 
-    alert(`🎉 Successfully Registered!\n\n₹${entryFee} has been deducted from your wallet. Good luck! 🚀`);
-    navigate("/tournaments");
+      if (!deductData.success) {
+        alert(deductData.message || "Failed to deduct entry fee from wallet!");
+        return;
+      }
+
+      // Update local wallet balance state
+      walletBalance = deductData.newBalance;
+      localStorage.setItem("walletBalance", walletBalance.toFixed(2));
+
+      // 🟢 Send join details to backend with Game ID & Username for Admin panel list
+      const joinRes = await fetch(`${API_URL}/api/tournaments/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: tournamentId,
+          userEmail: userEmail,
+          userName: userName,
+          gameId: gameId.trim(),
+          gameUsername: gameUsername.trim()
+        })
+      });
+      const joinData = await joinRes.json();
+
+      if (joinData.success) {
+        // Save joined tournament ID locally
+        const myJoinedIds = JSON.parse(localStorage.getItem("myJoinedTournamentIds")) || [];
+        if (!myJoinedIds.includes(tournamentId)) {
+          myJoinedIds.push(tournamentId);
+          localStorage.setItem("myJoinedTournamentIds", JSON.stringify(myJoinedIds));
+        }
+
+        alert(`🎉 Successfully Registered!\n\n₹${entryFee} has been deducted from your wallet. Good luck! 🚀`);
+        navigate("/tournaments");
+      } else {
+        alert(joinData.message || "Failed to join tournament on server!");
+      }
+    } catch (err) {
+      console.error("Join tournament network error:", err);
+      alert("Server error during tournament registration.");
+    }
   };
 
   if (!tournament) {
@@ -96,7 +133,7 @@ export default function TournamentDetail() {
     );
   }
 
-  const isFull = tournament.registeredUsers && tournament.registeredUsers.length >= tournament.totalSlots;
+  const isFull = tournament.registeredUsers && tournament.registeredUsers.length >= (tournament.totalSlots || tournament.slots);
 
   return (
     <div style={{ padding: "20px", color: "#fff", background: "#0f172a", minHeight: "100vh", paddingBottom: "80px", maxWidth: "600px", margin: "0 auto" }}>
@@ -123,9 +160,15 @@ export default function TournamentDetail() {
           <h1 style={{ fontSize: "18px", color: "#fff", margin: 0, fontWeight: "900" }}>
             {tournament.game} - {tournament.mode}
           </h1>
-          <span style={{ background: isFull ? "#ef4444" : "#22c55e", color: "#fff", fontSize: "9px", fontWeight: "800", padding: "4px 10px", borderRadius: "6px" }}>
-            {isFull ? "● FULL" : "● LIVE"}
-          </span>
+          {/* 🟢 Live Green Box with Date & Time Side Box */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ background: isFull ? "#ef4444" : "#22c55e", color: "#fff", fontSize: "9px", fontWeight: "800", padding: "4px 8px", borderRadius: "6px" }}>
+              {isFull ? "● FULL" : "● LIVE"}
+            </span>
+            <span style={{ background: "rgba(255,255,255,0.1)", color: "#fbbf24", fontSize: "9px", fontWeight: "800", padding: "4px 8px", borderRadius: "6px", border: "1px solid rgba(251,191,36,0.3)" }}>
+              🕒 {tournament.startTime ? new Date(tournament.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Soon"}
+            </span>
+          </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px", margin: "16px 0", background: "rgba(255,255,255,0.05)", padding: "12px", borderRadius: "10px" }}>
@@ -139,14 +182,43 @@ export default function TournamentDetail() {
           </div>
           <div>
             <span style={{ color: "#9ca3af", fontSize: "10px", display: "block" }}>SLOTS FILLED</span>
-            <strong style={{ color: "#fff", fontSize: "13px" }}>{tournament.registeredUsers ? tournament.registeredUsers.length : 0} / {tournament.totalSlots}</strong>
+            <strong style={{ color: "#fff", fontSize: "13px" }}>{tournament.registeredUsers ? tournament.registeredUsers.length : 0} / {tournament.totalSlots || tournament.slots}</strong>
           </div>
           <div>
             <span style={{ color: "#9ca3af", fontSize: "10px", display: "block" }}>MATCH TIME</span>
-            <strong style={{ color: "#cbd5e1", fontSize: "12px" }}>{new Date(tournament.startTime).toLocaleString()}</strong>
+            <strong style={{ color: "#cbd5e1", fontSize: "12px" }}>{tournament.startTime ? new Date(tournament.startTime).toLocaleString() : "TBA"}</strong>
           </div>
         </div>
 
+      </div>
+
+      {/* 🟢 Game ID & Username Input Section */}
+      <div style={{ background: "rgba(124, 58, 237, 0.1)", border: "1px solid rgba(124, 58, 237, 0.4)", padding: "16px", borderRadius: "14px", marginBottom: "20px" }}>
+        <h3 style={{ color: "#c084fc", fontSize: "13px", margin: "0 0 10px 0", fontWeight: "900" }}>
+          🎮 ENTER YOUR GAME DETAILS (Saved for Future)
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div>
+            <label style={{ fontSize: "10px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>Game Character ID / UID</label>
+            <input 
+              type="text" 
+              placeholder="e.g. 582910293" 
+              value={gameId} 
+              onChange={(e) => setGameId(e.target.value)}
+              style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "12px", boxSizing: "border-box" }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: "10px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>In-Game Username</label>
+            <input 
+              type="text" 
+              placeholder="e.g. ꧁#LEGEND#꧂" 
+              value={gameUsername} 
+              onChange={(e) => setGameUsername(e.target.value)}
+              style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontSize: "12px", boxSizing: "border-box" }}
+            />
+          </div>
+        </div>
       </div>
 
       <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", padding: "16px", borderRadius: "14px", marginBottom: "20px" }}>
