@@ -60,7 +60,6 @@ const adminEarningsSchema = new mongoose.Schema({
 });
 const AdminEarning = mongoose.model('AdminEarning', adminEarningsSchema);
 
-// Withdrawal Schema & Model
 const withdrawalSchema = new mongoose.Schema({
     userEmail: String,
     withdrawalAmount: Number,
@@ -96,7 +95,7 @@ app.get('/', (req, res) => {
   res.send('Win Arena Backend API is active!');
 });
 
-// User Balance Get API (Fixed with fallback)
+// User Balance Get API
 app.get('/api/user/balance', async (req, res) => {
     try {
         const userEmail = req.query.email || "user@winarena.com";
@@ -199,7 +198,7 @@ app.post('/api/wallet/add', async (req, res) => {
     }
 });
 
-// Dedicated Deduct / Spend Money API (Fixed with fallback)
+// Dedicated Deduct / Spend Money API
 app.post('/api/wallet/deduct', async (req, res) => {
     try {
         const { email, amount } = req.body;
@@ -234,7 +233,7 @@ app.post('/api/wallet/deduct', async (req, res) => {
     }
 });
 
-// Dedicated Withdrawal API Route (Fixed with fallback)
+// Dedicated Withdrawal API Route
 app.post('/api/withdraw', async (req, res) => {
     try {
         const { email, amount, method, details } = req.body;
@@ -274,7 +273,9 @@ app.post('/api/withdraw', async (req, res) => {
         res.json({ 
             success: true, 
             message: "Withdrawal request submitted successfully!", 
-            newBalance: user.walletBalance 
+            newBalance: user.walletBalance,
+            commissionAmount: commission,
+            finalPayout: finalPayout
         });
     } catch (err) {
         console.error("Withdrawal error:", err);
