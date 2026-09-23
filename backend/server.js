@@ -60,6 +60,19 @@ const adminEarningsSchema = new mongoose.Schema({
 });
 const AdminEarning = mongoose.model('AdminEarning', adminEarningsSchema);
 
+// 🟢 Withdrawal Schema & Model
+const withdrawalSchema = new mongoose.Schema({
+    userEmail: String,
+    withdrawalAmount: Number,
+    commissionAmount: Number,
+    finalPayout: Number,
+    method: String,
+    details: Object,
+    status: { type: String, default: "Pending" },
+    timestamp: { type: Date, default: Date.now }
+});
+const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);
+
 const tournamentSchema = new mongoose.Schema({
     game: { type: String, required: true },
     mode: { type: String, required: true },
@@ -221,6 +234,77 @@ app.post('/api/wallet/deduct', async (req, res) => {
     }
 });
 
+// 🟢 Dedicated Withdrawal API Route
+app.post('/api/withdraw', async (req, res) => {
+    try {
+        const { email, amount, method, details } = req.body;
+        const amt = parseFloat(amount);
+
+        if (!amt || amt <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid withdrawal amount!" });
+        }
+
+        let user = await User.findOne({ email });
+        if (!user || user.walletBalance < amt) {
+            return res.status(400).json({ success: false, message: "Insufficient balance!" });
+        }
+
+        const commission = parseFloat((amt * 0.025).toFixed(2));
+        const finalPayout = parseFloat((amt - commission).toFixed(2));
+
+        user.walletBalance = parseFloat((user.walletBalance - amt).toFixed(2));
+        await user.save();
+
+        const withdrawal = new Withdrawal({
+            userEmail: email,
+            withdrawalAmount: amt,
+            commissionAmount: commission,
+            finalPayout,
+            method,
+            details
+        });
+        await withdrawal.save();
+
+        res.json({ 
+            success: true, 
+            message: "Withdrawal request submitted successfully!", 
+            newBalance: user.walletBalance 
+        });
+    } catch (err) {
+        console.error("Withdrawal error:", err);
+        res.status(500).json({ success: false, message: "Server error during withdrawal" });
+    }
+});
+
+// Admin Get Withdrawals API
+app.get('/api/admin/withdrawals', async (req, res) => {
+    try {
+        const withdrawals = await Withdrawal.find().sort({ timestamp: -1 });
+        res.json({ success: true, withdrawals });
+    } catch (err) {
+        console.error("Fetch withdrawals error:", err);
+        res.status(500).json({ success: false, message: "Error fetching withdrawals" });
+    }
+});
+
+// Admin Approve Withdrawal API
+app.post('/api/admin/approve-withdrawal', async (req, res) => {
+    try {
+        const { id } = req.body;
+        const withdrawal = await Withdrawal.findById(id);
+        if (!withdrawal) {
+            return res.status(404).json({ success: false, message: "Withdrawal request not found" });
+        }
+
+        withdrawal.status = "Approved";
+        await withdrawal.save();
+        res.json({ success: true, message: "Withdrawal approved successfully" });
+    } catch (err) {
+        console.error("Approve withdrawal error:", err);
+        res.status(500).json({ success: false, message: "Error approving withdrawal" });
+    }
+});
+
 
 // ---------------- TOURNAMENT APIs ----------------
 
@@ -257,7 +341,7 @@ app.post('/api/tournaments', async (req, res) => {
     }
 });
 
-// 🟢 Tournament Join API (Game ID aur Username ke sath)
+// Tournament Join API
 app.post('/api/tournaments/join', async (req, res) => {
     try {
         const { tournamentId, userEmail, userName, gameId, gameUsername } = req.body;
@@ -292,7 +376,7 @@ app.post('/api/tournaments/join', async (req, res) => {
     }
 });
 
-// 🟢 Admin Pay Winner API (Admin panel se winner ke wallet me prize add karne ke liye)
+// Admin Pay Winner API
 app.post('/api/admin/pay-winner', async (req, res) => {
     try {
         const { userEmail, prizeAmount } = req.body;
