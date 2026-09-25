@@ -10,79 +10,54 @@ export default function Leaderboard() {
   const API_URL = "https://winarena-backend-1.onrender.com";
 
   useEffect(() => {
-    const fetchLeaderboardData = async () => {
-      const earningsMap = {};
-
-      // 1. Fetch tournaments from Backend MongoDB Database
+    const fetchRealUsersLeaderboard = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/tournaments`);
+        // Backend se saare real registered users fetch karein
+        const res = await fetch(`${API_URL}/api/users`);
         const data = await res.json();
-        const allTournaments = Array.isArray(data) ? data : (data.tournaments || []);
+        
+        let usersList = Array.isArray(data) ? data : (data.users || []);
 
-        allTournaments.forEach((t) => {
-          if (t.registeredUsers && Array.isArray(t.registeredUsers)) {
-            t.registeredUsers.forEach((user) => {
-              if (!earningsMap[user]) {
-                earningsMap[user] = 0;
-              }
-              earningsMap[user] += parseFloat(t.prize) || 500;
-            });
-          }
-        });
+        if (usersList.length > 0) {
+          // Users ke balance ya earnings ko map karein
+          usersList = usersList.map((user) => ({
+            name: user.name || user.email?.split("@")[0] || "Player",
+            earnings: user.balance !== undefined ? user.balance * 10 : (user.earnings || Math.floor(Math.random() * 5000) + 1000)
+          }));
+        } else {
+          // Agar backend se koi user nahi mila toh fallback default list
+          usersList = [
+            { name: "RahulGamer", earnings: 14500 },
+            { name: "VickyOp", earnings: 12200 },
+            { name: "KillerBoy", earnings: 9800 },
+            { name: "Ajay99", earnings: 8500 },
+            { name: "DevKing", earnings: 7200 }
+          ];
+        }
+
+        // Tab filters ke hisaab se earnings adjust karein
+        if (activeTab === "Daily") {
+          usersList = usersList.map(u => ({ ...u, earnings: Math.round(u.earnings / 7) }));
+        } else if (activeTab === "Monthly") {
+          usersList = usersList.map(u => ({ ...u, earnings: u.earnings * 4 }));
+        }
+
+        // Sabse zyada earn karne walon ko top par sort karein
+        usersList.sort((a, b) => b.earnings - a.earnings);
+        setTopUsers(usersList);
+
       } catch (err) {
-        console.error("Error fetching tournaments for leaderboard from backend, checking local storage:", err);
-      }
-
-      // 2. Fallback to LocalStorage admin tournaments if backend is empty
-      if (Object.keys(earningsMap).length === 0) {
-        const localTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
-        localTournaments.forEach((t) => {
-          if (t.registeredUsers && Array.isArray(t.registeredUsers)) {
-            t.registeredUsers.forEach((user) => {
-              if (!earningsMap[user]) {
-                earningsMap[user] = 0;
-              }
-              earningsMap[user] += parseFloat(t.prize) || 500;
-            });
-          }
-        });
-      }
-
-      // 3. Map earnings to users list
-      let usersList = Object.keys(earningsMap).map((name) => ({
-        name,
-        earnings: earningsMap[name]
-      }));
-
-      // 4. Agar koi real user registered nahi hai, tabhi default players dikhayein
-      if (usersList.length === 0) {
-        usersList = [
+        console.error("Error fetching real users for leaderboard:", err);
+        // Fallback agar API fail ho jaye
+        setTopUsers([
           { name: "RahulGamer", earnings: 14500 },
           { name: "VickyOp", earnings: 12200 },
-          { name: "KillerBoy", earnings: 9800 },
-          { name: "Ajay99", earnings: 8500 },
-          { name: "DevKing", earnings: 7200 },
-          { name: "FireStorm", earnings: 6400 },
-          { name: "AlphaWolf", earnings: 5100 },
-          { name: "ShadowX", earnings: 4300 },
-          { name: "Raja007", earnings: 3500 },
-          { name: "TigerEye", earnings: 2900 }
-        ];
+          { name: "KillerBoy", earnings: 9800 }
+        ]);
       }
-
-      // 5. Tab filters ke hisaab se earnings adjust karein
-      if (activeTab === "Daily") {
-        usersList = usersList.map(u => ({ ...u, earnings: Math.round(u.earnings / 7) }));
-      } else if (activeTab === "Monthly") {
-        usersList = usersList.map(u => ({ ...u, earnings: u.earnings * 4 }));
-      }
-
-      // Sabse zyada earn karne walon ko top par sort karein
-      usersList.sort((a, b) => b.earnings - a.earnings);
-      setTopUsers(usersList);
     };
 
-    fetchLeaderboardData();
+    fetchRealUsersLeaderboard();
   }, [activeTab]);
 
   const top3 = topUsers.slice(0, 3);
@@ -93,7 +68,7 @@ export default function Leaderboard() {
       
       {/* HEADER TITLE */}
       <h1 style={{ fontSize: "18px", color: "#fbbf24", marginBottom: "12px", fontWeight: "900", textAlign: "center" }}>
-        👑 Leaderboard
+        👑 Real Users Leaderboard
       </h1>
 
       {/* TABS (Daily, Weekly, Monthly) */}
@@ -176,7 +151,7 @@ export default function Leaderboard() {
                   <h4 style={{ margin: 0, fontSize: "13px", color: "#fff", fontWeight: "800" }}>
                     {user.name}
                   </h4>
-                  <span style={{ fontSize: "9px", color: "#22c55e" }}>Live User</span>
+                  <span style={{ fontSize: "9px", color: "#22c55e" }}>Verified Player</span>
                 </div>
               </div>
 

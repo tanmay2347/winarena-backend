@@ -18,15 +18,11 @@ export default function Wallet() {
   const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
   const API_URL = "https://winarena-backend-1.onrender.com";
 
-  useEffect(() => {
-    // 🟢 Bulletproof dynamic Razorpay SDK loader for APK & Web
-    if (!window.Razorpay) {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }
+  // 🟢 Apni Paytm Business ya Direct Merchant UPI ID yahan dalein
+  const BUSINESS_UPI_ID = "apki.paytm.business@paytm"; 
+  const BUSINESS_NAME = "Win Arena";
 
+  useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
 
@@ -36,7 +32,7 @@ export default function Wallet() {
       return;
     }
 
-    // 🟢 Backend se live balance fetch karein taaki sync error na aaye
+    // Backend se live balance fetch karein
     fetch(`${API_URL}/api/user/balance?email=${encodeURIComponent(userEmail)}`)
       .then((res) => res.json())
       .then((data) => {
@@ -74,7 +70,8 @@ export default function Wallet() {
     }
   }, [navigate, userEmail]);
 
-  const handleAddMoney = async (e) => {
+  // 🟢 RAZORPAY HATA KAR DIRECT UPI INTENT LAGAYA GAYA HAI
+  const handleAddMoney = (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) {
@@ -82,101 +79,11 @@ export default function Wallet() {
       return;
     }
 
-    const completeDeposit = async (methodName, refId) => {
-      try {
-        const res = await fetch(`${API_URL}/api/wallet/add`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: userEmail, amount: amt })
-        });
-        const data = await res.json();
-
-        const newBalance = (data.success && data.newBalance !== undefined) ? data.newBalance : (balance + amt);
-        setBalance(newBalance);
-        localStorage.setItem("walletBalance", newBalance.toFixed(2));
-        
-        const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
-        const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
-        history.unshift({ 
-          type: `Deposit via ${methodName}`, 
-          amount: amt, 
-          time: new Date().toLocaleString(), 
-          txnId: uniqueTxnId, 
-          gatewayId: refId,
-          status: "Success" 
-        });
-        localStorage.setItem("walletHistory", JSON.stringify(history));
-
-        setAmount("");
-        setPopupData({
-          title: "Deposit Successful! 🎉",
-          message: `Successfully added ₹${amt} to your wallet.`,
-          txnId: uniqueTxnId,
-          subtext: "Funds updated instantly."
-        });
-      } catch (err) {
-        console.error("Backend deposit sync error:", err);
-        alert("Payment successful but failed to update backend balance.");
-      }
-    };
-
-    try {
-      const res = await fetch(`${API_URL}/api/create-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amt })
-      });
-      const data = await res.json();
-
-      if (!data.success) {
-        alert("Order creation failed from backend!");
-        return;
-      }
-
-      if (!window.Razorpay) {
-        alert("Razorpay SDK is loading. Please try again in 2 seconds.");
-        return;
-      }
-
-      const options = {
-        key: "rzp_test_TZydNSxzH1KSjl",
-        amount: data.order.amount,
-        currency: "INR",
-        name: "Win Arena",
-        description: "Wallet Deposit via Gateway",
-        order_id: data.order.id,
-        handler: async function (response) {
-          try {
-            const verifyRes = await fetch(`${API_URL}/api/verify-payment`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(response)
-            });
-            const verifyData = await verifyRes.json();
-            if (verifyData.success) {
-              completeDeposit("Razorpay", response.razorpay_payment_id);
-            } else {
-              alert("Payment verification failed!");
-            }
-          } catch (err) {
-            console.error("Verification error:", err);
-            completeDeposit("Razorpay", response.razorpay_payment_id);
-          }
-        },
-        prefill: {
-          name: localStorage.getItem("userName") || "WinArena User",
-          email: userEmail,
-          contact: "8857824607"
-        },
-        theme: { color: "#7c3aed" }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err) {
-      console.error("Payment error:", err);
-      alert("Network error during payment initialization.");
-    }
+    // UPI Intent URL generate karna jisme "Win Arena" naam aur amount auto-fill hoga
+    const upiUrl = `upi://pay?pa=${BUSINESS_UPI_ID}&pn=${encodeURIComponent(BUSINESS_NAME)}&am=${amt}&cu=INR`;
+    
+    // User ke phone mein installed UPI app (PhonePe, Paytm, GPay) open karna
+    window.location.href = upiUrl;
   };
 
   const handleWithdraw = async (e) => {
@@ -303,7 +210,7 @@ export default function Wallet() {
           onClick={() => { setActiveTab("add"); setAmount(""); }}
           style={{ flex: 1, background: activeTab === "add" ? "#7c3aed" : "transparent", color: activeTab === "add" ? "#fff" : "#9ca3af", border: "none", padding: "12px", borderRadius: "10px", fontSize: "13px", fontWeight: "900", cursor: "pointer" }}
         >
-          + Add Money (Razorpay)
+          + Add Money (UPI)
         </button>
         <button
           onClick={() => { setActiveTab("withdraw"); setAmount(""); }}
@@ -361,7 +268,7 @@ export default function Wallet() {
       {/* AMOUNT INPUT & FORM */}
       <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.15)", padding: "18px", marginBottom: "20px" }}>
         <h3 style={{ fontSize: "14px", color: "#fbbf24", margin: "0 0 12px 0", fontWeight: "900" }}>
-          {activeTab === "add" ? "Add Money via Razorpay Gateway" : `Withdraw via ${withdrawMethod}`}
+          {activeTab === "add" ? "Add Money via Direct UPI" : `Withdraw via ${withdrawMethod}`}
         </h3>
 
         <form onSubmit={activeTab === "add" ? handleAddMoney : handleWithdraw}>
@@ -412,7 +319,7 @@ export default function Wallet() {
             type="submit" 
             style={{ background: activeTab === "add" ? "#22c55e" : "#fbbf24", color: "#000", border: "none", padding: "14px", borderRadius: "12px", fontWeight: "900", cursor: "pointer", width: "100%", fontSize: "14px" }}
           >
-            {activeTab === "add" ? "PAY VIA RAZORPAY GATEWAY ⚡" : "Withdraw Now →"}
+            {activeTab === "add" ? "PAY VIA UPI APP ⚡" : "Withdraw Now →"}
           </button>
         </form>
       </div>

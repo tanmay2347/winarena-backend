@@ -7,6 +7,7 @@ export default function Profile() {
   const [userName, setUserName] = useState("User");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
+  const [telegram, setTelegram] = useState(""); // 🟢 Telegram State
   const [playerId, setPlayerId] = useState("WA000000");
 
   // User Stats based on Tournaments participation
@@ -20,9 +21,10 @@ export default function Profile() {
   const [nextLevelTarget, setNextLevelTarget] = useState(50);
   const [totalWinnings, setTotalWinnings] = useState(0);
 
-  // Modals state ("edit", "security", "rewards", "history", "about")
+  // Modals state ("edit", "telegram", "security", "rewards", "history", "about")
   const [activeModal, setActiveModal] = useState(null);
   const [passwordData, setPasswordData] = useState({ current: "", newPass: "" });
+  const [tempTelegram, setTempTelegram] = useState("");
 
   // 🛡️ Authentication & Data Load Check
   useEffect(() => {
@@ -40,25 +42,29 @@ export default function Profile() {
       setWalletBalance(parseFloat(savedBalance).toFixed(2));
     }
 
-    // 🔴 Fixed: Synchronized with both `userProfile` and individual keys
     const savedUser = JSON.parse(localStorage.getItem("userProfile"));
     const singleUserName = localStorage.getItem("userName");
     const singleEmail = localStorage.getItem("userEmail");
     const singleMobile = localStorage.getItem("userMobile");
+    const singleTelegram = localStorage.getItem("userTelegram") || "";
 
     if (savedUser) {
       if (savedUser.name) setUserName(savedUser.name);
       if (savedUser.email) setEmail(savedUser.email);
       if (savedUser.mobile) setMobile(savedUser.mobile);
+      if (savedUser.telegram) setTelegram(savedUser.telegram);
       if (savedUser.playerId) setPlayerId(savedUser.playerId);
     } else if (singleUserName || singleEmail || singleMobile) {
       if (singleUserName) setUserName(singleUserName);
       if (singleEmail) setEmail(singleEmail);
       if (singleMobile) setMobile(singleMobile);
+      if (singleTelegram) setTelegram(singleTelegram);
       setPlayerId("WA" + Math.floor(100000 + Math.random() * 900000));
     } else {
       setPlayerId("WA" + Math.floor(100000 + Math.random() * 900000));
     }
+
+    setTempTelegram(telegram);
 
     const allTournaments = JSON.parse(localStorage.getItem("adminTournaments")) || [];
     let gamesCount = 0;
@@ -94,7 +100,7 @@ export default function Profile() {
     const progressInCurrentLevel = winningsSum - accumulated;
     setLevelProgress(target > 0 ? Math.min(Math.round((progressInCurrentLevel / target) * 100), 100) : 0);
 
-  }, [navigate, userName]);
+  }, [navigate, userName, telegram]);
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
@@ -102,16 +108,30 @@ export default function Profile() {
     navigate("/login");
   };
 
-  // 🔴 Fixed: Save profile details to all necessary localStorage keys simultaneously
   const handleSaveProfile = (e) => {
     e.preventDefault();
-    const profileData = { name: userName, email, mobile, playerId };
+    const profileData = { name: userName, email, mobile, telegram, playerId };
     localStorage.setItem("userProfile", JSON.stringify(profileData));
     localStorage.setItem("userName", userName);
     localStorage.setItem("userEmail", email);
     localStorage.setItem("userMobile", mobile);
+    localStorage.setItem("userTelegram", telegram);
     
     alert("Profile updated successfully! 🚀");
+    setActiveModal(null);
+  };
+
+  // 🟢 Handle Telegram Save
+  const handleSaveTelegram = (e) => {
+    e.preventDefault();
+    setTelegram(tempTelegram);
+    localStorage.setItem("userTelegram", tempTelegram);
+    
+    const savedUser = JSON.parse(localStorage.getItem("userProfile")) || { name: userName, email, mobile, playerId };
+    savedUser.telegram = tempTelegram;
+    localStorage.setItem("userProfile", JSON.stringify(savedUser));
+
+    alert("Telegram account linked successfully! ✈️");
     setActiveModal(null);
   };
 
@@ -153,8 +173,11 @@ export default function Profile() {
             <h3 style={{ margin: 0, fontSize: "15px", color: "#fff", fontWeight: "900" }}>{userName}</h3>
             <span onClick={() => setActiveModal("edit")} style={{ cursor: "pointer", fontSize: "12px" }} title="Edit Profile">✏️</span>
           </div>
-          <p style={{ margin: "0 0 8px 0", fontSize: "11px", color: "#9ca3af" }}>
+          <p style={{ margin: "0 0 4px 0", fontSize: "11px", color: "#9ca3af" }}>
             Player ID: {playerId} <span style={{ cursor: "pointer" }} onClick={() => alert("Player ID Copied!")}>📋</span>
+          </p>
+          <p style={{ margin: "0 0 8px 0", fontSize: "11px", color: "#38bdf8" }}>
+            Telegram: {telegram ? `@${telegram}` : <span style={{ color: "#ef4444", cursor: "pointer" }} onClick={() => setActiveModal("telegram")}>Not Linked (Click to link)</span>}
           </p>
           
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -194,6 +217,18 @@ export default function Profile() {
             <div>
               <h4 style={menuTitleStyle}>Edit Profile</h4>
               <p style={menuDescStyle}>Update your name, email, mobile number</p>
+            </div>
+          </div>
+          <span style={{ color: "#fbbf24", fontSize: "14px" }}>›</span>
+        </div>
+
+        {/* 🟢 Telegram Link Menu Button */}
+        <div onClick={() => setActiveModal("telegram")} style={menuCardStyle}>
+          <div style={menuContentStyle}>
+            <span style={{ fontSize: "18px" }}>✈️</span>
+            <div>
+              <h4 style={menuTitleStyle}>Telegram Account</h4>
+              <p style={menuDescStyle}>{telegram ? `Linked: @${telegram}` : "Link your Telegram for updates & room IDs"}</p>
             </div>
           </div>
           <span style={{ color: "#fbbf24", fontSize: "14px" }}>›</span>
@@ -292,7 +327,26 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 2. ACCOUNT SECURITY MODAL */}
+      {/* 🟢 2. TELEGRAM LINK MODAL */}
+      {activeModal === "telegram" && (
+        <div style={modalOverlayStyle}>
+          <div style={modalBoxStyle}>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "16px" }}>✈️ Link Telegram Account</h3>
+            <p style={{ fontSize: "11px", color: "#cbd5e1", marginBottom: "14px" }}>Apna Telegram Username dalein taaki tournament room IDs aur instant updates mil sakein:</p>
+            <form onSubmit={handleSaveTelegram} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <label style={{ fontSize: "10px", color: "#9ca3af" }}>Telegram Username (without @)</label>
+              <input type="text" placeholder="e.g. username123" value={tempTelegram} onChange={(e) => setTempTelegram(e.target.value)} style={inputStyle} required />
+
+              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                <button type="submit" style={btnPrimaryStyle}>Link Telegram ✈️</button>
+                <button type="button" onClick={() => setActiveModal(null)} style={btnSecondaryStyle}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. ACCOUNT SECURITY MODAL */}
       {activeModal === "security" && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
@@ -313,7 +367,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 3. MY REWARDS MODAL */}
+      {/* 4. MY REWARDS MODAL */}
       {activeModal === "rewards" && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
@@ -328,7 +382,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 4. TRANSACTION HISTORY MODAL */}
+      {/* 5. TRANSACTION HISTORY MODAL */}
       {activeModal === "history" && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
@@ -352,7 +406,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 5. ABOUT WINARENA MODAL */}
+      {/* 6. ABOUT WINARENA MODAL */}
       {activeModal === "about" && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>

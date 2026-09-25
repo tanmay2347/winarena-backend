@@ -36,6 +36,10 @@ export default function ArenaWallet() {
   const API_URL = "https://winarena-backend-1.onrender.com";
   const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
 
+  // 🟢 Apni Paytm Business ya Direct UPI ID yahan daalein
+  const BUSINESS_UPI_ID = "winarena@ptyes"; // Example: "yourbusiness@paytm" or "yourupi@upi"
+  const BUSINESS_NAME = "Win Arena";
+
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const isAdmin = localStorage.getItem("isAdmin") === "true";
@@ -242,7 +246,8 @@ export default function ArenaWallet() {
     }
   };
 
-  const handleAddMoney = async (e) => {
+  // 🟢 ADD MONEY VIA DIRECT UPI INTENT (Paytm Business / QR Code)
+  const handleAddMoney = (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) {
@@ -250,48 +255,13 @@ export default function ArenaWallet() {
       return;
     }
 
-    try {
-      const res = await fetch(`${API_URL}/api/wallet/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          amount: amt
-        })
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        const newBalance = data.newBalance;
-        setBalance(newBalance);
-        localStorage.setItem("walletBalance", newBalance.toFixed(2));
-
-        const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
-        const newHistoryItem = { 
-          type: "Deposit via Add Money", 
-          amount: amt, 
-          time: new Date().toLocaleString(), 
-          txnId: uniqueTxnId,
-          status: "Success" 
-        };
-
-        const updatedHistory = [newHistoryItem, ...history];
-        setHistory(updatedHistory);
-        localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
-
-        setAmount("");
-        setActionType(null);
-        alert(`Successfully added ₹${amt}!\nTxn ID: ${uniqueTxnId}`);
-      } else {
-        alert(data.message || "Failed to add money from server!");
-      }
-    } catch (err) {
-      console.error("Add money network error:", err);
-      alert("Network error while adding money.");
-    }
+    // UPI Intent URL with Business ID and Auto-filled Amount
+    const upiUrl = `upi://pay?pa=${BUSINESS_UPI_ID}&pn=${encodeURIComponent(BUSINESS_NAME)}&am=${amt}&cu=INR`;
+    
+    // Redirect user to their installed UPI app (PhonePe, GPay, Paytm)
+    window.location.href = upiUrl;
   };
 
-  // 🟢 FIXED: Withdrawal ab dedicated /api/withdraw route ko call karega jo admin panel mein pending request bhejega
   const handleWithdraw = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
@@ -485,21 +455,24 @@ export default function ArenaWallet() {
         )}
       </div>
 
-      {/* QR MODAL */}
+     {/* QR MODAL (Business QR Code Image Display) */}
       {showQrModal && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
-            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "16px" }}>🔲 Your Arena QR Code</h3>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "16px" }}>🔲 Win Arena QR Code</h3>
+            
             <div style={{ background: "#fff", padding: "16px", borderRadius: "12px", textAlign: "center", display: "inline-block", marginBottom: "12px" }}>
-              <QRCode 
-                value={userArenaInfo?.qrCodeText || "WINARENA-P2P-QR"} 
-                size={150}
-                style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+              {/* Yahan aapki asli QR code image aayegi */}
+              <img 
+                src="/assets/winarena_qr.jpg" 
+                alt="Win Arena QR Code" 
+                style={{ width: "150px", height: "150px", objectFit: "contain" }} 
               />
               <span style={{ fontSize: "9px", color: "#000", fontWeight: "900", display: "block", marginTop: "6px" }}>SCAN TO PAY</span>
             </div>
-            <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 4px 0" }}>Name: {userArenaInfo?.name}</p>
-            <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 14px 0" }}>Mobile: {userArenaInfo?.mobile}</p>
+
+            <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 4px 0" }}>Name: {BUSINESS_NAME}</p>
+            <p style={{ fontSize: "11px", color: "#cbd5e1", margin: "0 0 14px 0" }}>UPI ID: {BUSINESS_UPI_ID}</p>
             <button onClick={() => setShowQrModal(false)} style={btnPrimaryStyle}>Close</button>
           </div>
         </div>
@@ -568,7 +541,7 @@ export default function ArenaWallet() {
           <div style={modalBoxStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <h3 style={{ color: "#fbbf24", margin: 0, fontSize: "15px", fontWeight: "900" }}>
-                {actionType === "add" ? "💰 Add Money" : "📤 Withdraw Funds"}
+                {actionType === "add" ? "💰 Add Money (Direct UPI)" : "📤 Withdraw Funds"}
               </h3>
               <button onClick={() => setActionType(null)} style={{ background: "transparent", border: "none", color: "#9ca3af", fontSize: "16px", cursor: "pointer", fontWeight: "900" }}>✕</button>
             </div>
@@ -654,7 +627,7 @@ export default function ArenaWallet() {
                   fontSize: "12px"
                 }}
               >
-                {actionType === "add" ? "CONFIRM & ADD MONEY ⚡" : "CONFIRM WITHDRAWAL →"}
+                {actionType === "add" ? "PAY VIA UPI APP ⚡" : "CONFIRM WITHDRAWAL →"}
               </button>
             </form>
           </div>
