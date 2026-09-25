@@ -4,8 +4,6 @@ dns.setDefaultResultOrder('ipv4first');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -15,12 +13,6 @@ app.use(cors());
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
-
-// Razorpay Instance Initialize
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-});
 
 // MongoDB Connection
 mongoose.connect(MONGO_URI)
@@ -475,46 +467,5 @@ app.post('/api/transfer', async (req, res) => {
     } catch (err) {
         console.error("P2P Transfer error:", err);
         res.status(500).json({ success: false, message: "Server error during P2P transfer: " + err.message });
-    }
-});
-
-app.post('/api/create-order', async (req, res) => {
-    try {
-        const { amount } = req.body;
-        if (!amount || amount <= 0) {
-            return res.status(400).json({ success: false, message: "Invalid amount" });
-        }
-
-        const options = {
-            amount: amount * 100,
-            currency: "INR",
-            receipt: "receipt_order_" + Date.now()
-        };
-
-        const order = await razorpay.orders.create(options);
-        res.json({ success: true, order });
-    } catch (err) {
-        console.error("Razorpay Order Error:", err);
-        res.status(500).json({ success: false, message: "Something went wrong while creating order" });
-    }
-});
-
-app.post('/api/verify-payment', async (req, res) => {
-    try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-        const sign = razorpay_order_id + "|" + razorpay_payment_id;
-        const expectedSign = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-            .update(sign.toString())
-            .digest("hex");
-
-        if (expectedSign === razorpay_signature) {
-            res.json({ success: true, message: "Payment verified successfully" });
-        } else {
-            res.status(400).json({ success: false, message: "Invalid signature!" });
-        }
-    } catch (err) {
-        console.error("Payment Verification Error:", err);
-        res.status(500).json({ status: false, message: "Server error" });
     }
 });
