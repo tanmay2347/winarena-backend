@@ -19,7 +19,7 @@ export default function Wallet() {
   const API_URL = "https://winarena-backend-1.onrender.com";
 
   // 🟢 Apni Paytm Business ya Direct Merchant UPI ID yahan dalein
-  const BUSINESS_UPI_ID = "apki.paytm.business@paytm"; 
+  const BUSINESS_UPI_ID = "winarena@ptyes"; 
   const BUSINESS_NAME = "Win Arena";
 
   useEffect(() => {
