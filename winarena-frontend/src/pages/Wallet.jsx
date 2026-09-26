@@ -77,7 +77,7 @@ export default function Wallet() {
     }
   }, [navigate, userEmail]);
 
-  // 🟢 ADD MONEY VIA CASHFREE PAYMENT GATEWAY
+// 🟢 ADD MONEY VIA CASHFREE PAYMENT GATEWAY (Strict In-App Modal)
   const handleAddMoney = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
@@ -105,19 +105,18 @@ export default function Wallet() {
         return;
       }
 
-      // 2. Cashfree SDK Initialize (Sandbox mode)
+      // 2. Cashfree SDK Initialize
       const cashfree = window.Cashfree({
         mode: "sandbox"
       });
 
       let checkoutOptions = {
         paymentSessionId: data.payment_session_id,
-        redirectTarget: "_modal"
+        redirectTarget: "_self" // _self ya modal ki jagah popup prevent karne ke liye
       };
 
       cashfree.checkout(checkoutOptions).then(async function(result){
-        // Chahe result.paymentDetails aaye ya na aaye, hum direct wallet add API call kar denge 
-        // taaki sandbox/simulator mein testing ke waqt turant balance add ho jaye
+        // Payment complete hote hi wallet mein balance add karein
         const addRes = await fetch(`${API_URL}/api/wallet/add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
