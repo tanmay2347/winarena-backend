@@ -512,3 +512,28 @@ app.post('/api/create-cashfree-order', async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to create Cashfree order" });
     }
 });
+
+// ---------------- CASHFREE PAYMENT STATUS ROUTE ----------------
+app.get('/api/payment-status', async (req, res) => {
+    try {
+        const { order_id } = req.query;
+        res.send(`
+            <html>
+                <head>
+                    <title>Payment Successful</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="background: #0f172a; color: #fff; text-align: center; padding-top: 80px; font-family: sans-serif;">
+                    <div style="background: #1e1b4b; border: 2px solid #22c55e; padding: 30px; border-radius: 20px; max-width: 350px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                        <h2 style="color: #22c55e; margin-top: 0;">Payment Successful! 🎉</h2>
+                        <p style="font-size: 14px; color: #cbd5e1;">Aapka payment safal ho gaya hai aur order ID <strong>${order_id || ''}</strong> hai.</p>
+                        <p style="font-size: 12px; color: #fbbf24; margin-top: 20px;">Aap ab is page ko band karke apne app par wapas ja sakte hain.</p>
+                    </div>
+                </body>
+            </html>
+        `);
+    } catch (err) {
+        console.error("Payment status error:", err);
+        res.status(500).send("Server error during payment status check");
+    }
+});
