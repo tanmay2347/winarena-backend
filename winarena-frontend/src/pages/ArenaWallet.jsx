@@ -35,10 +35,20 @@ export default function ArenaWallet() {
 
   const API_URL = "https://winarena-backend-1.onrender.com";
   const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
+  const userMobile = localStorage.getItem("userMobile") || "9999999999";
 
-  // 🟢 Apni Paytm Business ya Direct UPI ID yahan daalein
-  const BUSINESS_UPI_ID = "winarena@ptyes"; // Example: "yourbusiness@paytm" or "yourupi@upi"
+  const BUSINESS_UPI_ID = "winarena@ptyes"; 
   const BUSINESS_NAME = "Win Arena";
+
+  // 🟢 Load Cashfree SDK script on mount
+  useEffect(() => {
+    if (!window.Cashfree) {
+      const script = document.createElement("script");
+      script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -246,8 +256,8 @@ export default function ArenaWallet() {
     }
   };
 
-  // 🟢 ADD MONEY VIA DIRECT UPI INTENT (Paytm Business / QR Code)
-  const handleAddMoney = (e) => {
+  // 🟢 ADD MONEY VIA CASHFREE PAYMENT GATEWAY
+  const handleAddMoney = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) {
@@ -255,11 +265,75 @@ export default function ArenaWallet() {
       return;
     }
 
-    // UPI Intent URL with Business ID and Auto-filled Amount
-    const upiUrl = `upi://pay?pa=${BUSINESS_UPI_ID}&pn=${encodeURIComponent(BUSINESS_NAME)}&am=${amt}&cu=INR`;
-    
-    // Redirect user to their installed UPI app (PhonePe, GPay, Paytm)
-    window.location.href = upiUrl;
+    try {
+      // 1. Backend se Cashfree order session create karein
+      const res = await fetch(`${API_URL}/api/create-cashfree-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amt, customerEmail: userEmail, customerPhone: userMobile })
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        alert("Failed to initialize Cashfree payment!");
+        return;
+      }
+
+      if (!window.Cashfree) {
+        alert("Cashfree SDK is loading. Please try again.");
+        return;
+      }
+
+      // 2. Cashfree SDK Initialize (Sandbox mode)
+      const cashfree = window.Cashfree({
+        mode: "sandbox" 
+      });
+
+      let checkoutOptions = {
+        paymentSessionId: data.payment_session_id,
+        redirectTarget: "_modal"
+      };
+
+      cashfree.checkout(checkoutOptions).then(async function(result){
+        if(result.error){
+          alert("Payment failed: " + result.error.message);
+        }
+        if(result.paymentDetails){
+          // Payment successful hone par wallet balance update karein
+          const addRes = await fetch(`${API_URL}/api/wallet/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, amount: amt })
+          });
+          const addData = await addRes.json();
+
+          if (addData.success) {
+            setBalance(addData.newBalance);
+            localStorage.setItem("walletBalance", addData.newBalance.toFixed(2));
+
+            const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
+            const newHistoryItem = { 
+              type: "Add Money via Cashfree", 
+              amount: amt, 
+              time: new Date().toLocaleString(), 
+              txnId: uniqueTxnId,
+              status: "Success" 
+            };
+            const updatedHistory = [newHistoryItem, ...history];
+            setHistory(updatedHistory);
+            localStorage.setItem("walletHistory", JSON.stringify(updatedHistory));
+
+            alert("Money added successfully via Cashfree! 🎉");
+            setActionType(null);
+            setAmount("");
+          }
+        }
+      });
+
+    } catch (err) {
+      console.error("Cashfree error:", err);
+      alert("Network error during payment initialization.");
+    }
   };
 
   const handleWithdraw = async (e) => {
@@ -455,14 +529,13 @@ export default function ArenaWallet() {
         )}
       </div>
 
-     {/* QR MODAL (Business QR Code Image Display) */}
+     {/* QR MODAL */}
       {showQrModal && (
         <div style={modalOverlayStyle}>
           <div style={modalBoxStyle}>
             <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "16px" }}>🔲 Win Arena QR Code</h3>
             
             <div style={{ background: "#fff", padding: "16px", borderRadius: "12px", textAlign: "center", display: "inline-block", marginBottom: "12px" }}>
-              {/* Yahan aapki asli QR code image aayegi */}
               <img 
                 src="/assets/winarena_qr.jpg" 
                 alt="Win Arena QR Code" 
@@ -541,7 +614,7 @@ export default function ArenaWallet() {
           <div style={modalBoxStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <h3 style={{ color: "#fbbf24", margin: 0, fontSize: "15px", fontWeight: "900" }}>
-                {actionType === "add" ? "💰 Add Money (Direct UPI)" : "📤 Withdraw Funds"}
+                {actionType === "add" ? "💰 Add Money via Cashfree" : "📤 Withdraw Funds"}
               </h3>
               <button onClick={() => setActionType(null)} style={{ background: "transparent", border: "none", color: "#9ca3af", fontSize: "16px", cursor: "pointer", fontWeight: "900" }}>✕</button>
             </div>
@@ -627,7 +700,7 @@ export default function ArenaWallet() {
                   fontSize: "12px"
                 }}
               >
-                {actionType === "add" ? "PAY VIA UPI APP ⚡" : "CONFIRM WITHDRAWAL →"}
+                {actionType === "add" ? "PAY VIA CASHFREE ⚡" : "CONFIRM WITHDRAWAL →"}
               </button>
             </form>
           </div>

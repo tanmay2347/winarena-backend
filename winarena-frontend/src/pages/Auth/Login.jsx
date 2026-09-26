@@ -84,7 +84,7 @@ export default function Login() {
             type="text" 
             value={email} 
             onChange={(e) => setEmail(e.target.value)} 
-            placeholder="Enter email / admin ID"
+            placeholder="Enter your email "
             required
             style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "#1e1b4b", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", boxSizing: "border-box" }}
           />

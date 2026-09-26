@@ -16,11 +16,18 @@ export default function Wallet() {
 
   const [popupData, setPopupData] = useState(null);
   const userEmail = localStorage.getItem("userEmail") || "user@winarena.com";
+  const userMobile = localStorage.getItem("userMobile") || "9999999999";
   const API_URL = "https://winarena-backend-1.onrender.com";
 
-  // 🟢 Apni Paytm Business ya Direct Merchant UPI ID yahan dalein
-  const BUSINESS_UPI_ID = "winarena@ptyes"; 
-  const BUSINESS_NAME = "Win Arena";
+  // 🟢 Load Cashfree SDK script on mount
+  useEffect(() => {
+    if (!window.Cashfree) {
+      const script = document.createElement("script");
+      script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -70,8 +77,8 @@ export default function Wallet() {
     }
   }, [navigate, userEmail]);
 
-  // 🟢 RAZORPAY HATA KAR DIRECT UPI INTENT LAGAYA GAYA HAI
-  const handleAddMoney = (e) => {
+  // 🟢 ADD MONEY VIA CASHFREE PAYMENT GATEWAY
+  const handleAddMoney = async (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) {
@@ -79,11 +86,72 @@ export default function Wallet() {
       return;
     }
 
-    // UPI Intent URL generate karna jisme "Win Arena" naam aur amount auto-fill hoga
-    const upiUrl = `upi://pay?pa=${BUSINESS_UPI_ID}&pn=${encodeURIComponent(BUSINESS_NAME)}&am=${amt}&cu=INR`;
-    
-    // User ke phone mein installed UPI app (PhonePe, Paytm, GPay) open karna
-    window.location.href = upiUrl;
+    try {
+      // 1. Backend se Cashfree order session create karein
+      const res = await fetch(`${API_URL}/api/create-cashfree-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amt, customerEmail: userEmail, customerPhone: userMobile })
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        alert("Failed to initialize Cashfree payment!");
+        return;
+      }
+
+      if (!window.Cashfree) {
+        alert("Cashfree SDK is loading. Please try again.");
+        return;
+      }
+
+      // 2. Cashfree SDK Initialize (Sandbox mode)
+      const cashfree = window.Cashfree({
+        mode: "sandbox"
+      });
+
+      let checkoutOptions = {
+        paymentSessionId: data.payment_session_id,
+        redirectTarget: "_modal"
+      };
+
+      cashfree.checkout(checkoutOptions).then(async function(result){
+        if(result.error){
+          alert("Payment failed: " + result.error.message);
+        }
+        if(result.paymentDetails){
+          // Payment successful hone par wallet balance update karein
+          const addRes = await fetch(`${API_URL}/api/wallet/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, amount: amt })
+          });
+          const addData = await addRes.json();
+
+          if (addData.success) {
+            setBalance(addData.newBalance);
+            localStorage.setItem("walletBalance", addData.newBalance.toFixed(2));
+
+            const uniqueTxnId = `TXN${Math.floor(100000000 + Math.random() * 900000000)}`;
+            const history = JSON.parse(localStorage.getItem("walletHistory")) || [];
+            history.unshift({ type: "Add Money via Cashfree", amount: amt, time: new Date().toLocaleString(), txnId: uniqueTxnId, status: "Success" });
+            localStorage.setItem("walletHistory", JSON.stringify(history));
+
+            setAmount("");
+            setPopupData({
+              title: "Money Added Successfully! 🎉",
+              message: `Added: ₹${amt} via Cashfree`,
+              txnId: uniqueTxnId,
+              subtext: "Amount has been credited to your wallet!"
+            });
+          }
+        }
+      });
+
+    } catch (err) {
+      console.error("Cashfree error:", err);
+      alert("Network error during payment initialization.");
+    }
   };
 
   const handleWithdraw = async (e) => {
@@ -210,7 +278,7 @@ export default function Wallet() {
           onClick={() => { setActiveTab("add"); setAmount(""); }}
           style={{ flex: 1, background: activeTab === "add" ? "#7c3aed" : "transparent", color: activeTab === "add" ? "#fff" : "#9ca3af", border: "none", padding: "12px", borderRadius: "10px", fontSize: "13px", fontWeight: "900", cursor: "pointer" }}
         >
-          + Add Money (UPI)
+          + Add Money (Cashfree)
         </button>
         <button
           onClick={() => { setActiveTab("withdraw"); setAmount(""); }}
@@ -268,7 +336,7 @@ export default function Wallet() {
       {/* AMOUNT INPUT & FORM */}
       <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.15)", padding: "18px", marginBottom: "20px" }}>
         <h3 style={{ fontSize: "14px", color: "#fbbf24", margin: "0 0 12px 0", fontWeight: "900" }}>
-          {activeTab === "add" ? "Add Money via Direct UPI" : `Withdraw via ${withdrawMethod}`}
+          {activeTab === "add" ? "Add Money via Cashfree Gateway" : `Withdraw via ${withdrawMethod}`}
         </h3>
 
         <form onSubmit={activeTab === "add" ? handleAddMoney : handleWithdraw}>
@@ -319,7 +387,7 @@ export default function Wallet() {
             type="submit" 
             style={{ background: activeTab === "add" ? "#22c55e" : "#fbbf24", color: "#000", border: "none", padding: "14px", borderRadius: "12px", fontWeight: "900", cursor: "pointer", width: "100%", fontSize: "14px" }}
           >
-            {activeTab === "add" ? "PAY VIA UPI APP ⚡" : "Withdraw Now →"}
+            {activeTab === "add" ? "PAY VIA CASHFREE ⚡" : "Withdraw Now →"}
           </button>
         </form>
       </div>
