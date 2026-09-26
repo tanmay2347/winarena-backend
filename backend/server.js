@@ -4,6 +4,7 @@ dns.setDefaultResultOrder('ipv4first');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
@@ -467,5 +468,47 @@ app.post('/api/transfer', async (req, res) => {
     } catch (err) {
         console.error("P2P Transfer error:", err);
         res.status(500).json({ success: false, message: "Server error during P2P transfer: " + err.message });
+    }
+});
+
+// ---------------- CASHFREE ORDER API ----------------
+app.post('/api/create-cashfree-order', async (req, res) => {
+    try {
+        const { amount, customerEmail, customerPhone } = req.body;
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid amount" });
+        }
+
+        const orderId = "order_" + Date.now();
+
+        const response = await axios.post(
+            'https://sandbox.cashfree.com/pg/orders',
+            {
+                order_id: orderId,
+                order_amount: amount,
+                order_currency: "INR",
+                customer_details: {
+                    customer_id: "cust_" + Date.now(),
+                    customer_email: customerEmail || "user@winarena.com",
+                    customer_phone: customerPhone || "9999999999"
+                },
+                order_meta: {
+                    return_url: "https://winarena-backend-1.onrender.com/api/payment-status?order_id=" + orderId
+                }
+            },
+            {
+                headers: {
+                    'x-client-id': process.env.CASHFREE_CLIENT_ID,
+                    'x-client-secret': process.env.CASHFREE_CLIENT_SECRET,
+                    'x-api-version': '2022-09-01',
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        res.json({ success: true, payment_session_id: response.data.payment_session_id, order_id: orderId });
+    } catch (err) {
+        console.error("Cashfree Order Error:", err.response?.data || err.message);
+        res.status(500).json({ success: false, message: "Failed to create Cashfree order" });
     }
 });
