@@ -7,14 +7,18 @@ export default function Games() {
   const [selectedGame, setSelectedGame] = useState("");
 
   // Game click handler
- const handleGameClick = (gameName) => {
+  const handleGameClick = (gameName) => {
     const formatted = gameName.toLowerCase().replace(/\s+/g, "");
     
-    // Agar Free Fire hai toh GameDetail page par bhej do jahan game-specific tournaments show honge
+    // Agar Free Fire hai toh GameDetail page par bhej do
     if (formatted.includes("freefire")) {
       navigate(`/games/freefire`);
+    } 
+    // Agar Carrom hai toh seedha Carrom game route (/carrom) par bhej do
+    else if (formatted.includes("carrom")) {
+      navigate(`/carrom`);
     } else {
-      // Baaki sabhi games ke liye "Coming Soon" popup dikhao
+      // Baaki games (jaise Ludo) ke liye "Coming Soon" popup dikhao
       setSelectedGame(gameName);
       setShowAlert(true);
     }
@@ -61,28 +65,28 @@ export default function Games() {
           </div>
         </div>
 
-        {/* CARROM CARD (Coming Soon) */}
+        {/* CARROM CARD (Now Active / Playable) */}
         <div 
           onClick={() => handleGameClick("Carrom")}
           style={{ 
             background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", 
             borderRadius: "16px", 
-            border: "1px solid rgba(255,255,255,0.1)", 
+            border: "2px solid #3b82f6", 
             overflow: "hidden", 
             cursor: "pointer",
-            opacity: 0.85
+            boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)"
           }}
         >
           <div style={{ padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <span style={{ background: "#f59e0b", color: "#000", fontSize: "9px", fontWeight: "900", padding: "3px 8px", borderRadius: "4px" }}>
-                ⏳ COMING SOON
+              <span style={{ background: "#3b82f6", color: "#fff", fontSize: "9px", fontWeight: "900", padding: "3px 8px", borderRadius: "4px" }}>
+                ● PLAY NOW
               </span>
               <h2 style={{ fontSize: "18px", margin: "8px 0 4px 0", fontWeight: "900", color: "#fff" }}>CARROM</h2>
               <p style={{ margin: 0, fontSize: "11px", color: "#9ca3af" }}>Real-time Board Match</p>
             </div>
-            <button style={{ background: "rgba(255,255,255,0.1)", color: "#9ca3af", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "800", fontSize: "12px", cursor: "pointer" }}>
-              SOON
+            <button style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "800", fontSize: "12px", cursor: "pointer" }}>
+              PLAY 🎯
             </button>
           </div>
         </div>
@@ -115,7 +119,7 @@ export default function Games() {
 
       </div>
 
-      {/* ANIMATED COMING SOON MODAL ALERT */}
+      {/* ANIMATED COMING SOON MODAL ALERT (For other upcoming games) */}
       {showAlert && (
         <div style={{
           position: "fixed",
