@@ -47,11 +47,13 @@ export default function Home() {
     }
   };
 
-  // Game Click Handler (Free Fire -> Open, Others -> Coming Soon Popup)
+  // Game Click Handler (Free Fire -> Open, Carrom -> Open /carrom, Others -> Coming Soon Popup)
   const handleGameClick = (gameName) => {
     const formatted = gameName.toLowerCase().replace(/\s+/g, "");
     if (formatted.includes("freefire")) {
       handleNavigation("/games/freefire");
+    } else if (formatted.includes("carrom")) {
+      handleNavigation("/carrom"); // 👈 Yeh Carrom ko direct zip wale game page par bhej dega
     } else {
       setSelectedGame(gameName);
       setShowAlert(true);
