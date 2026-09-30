@@ -14,6 +14,7 @@ import WalletDetails from "./pages/WalletDetails";
 import ArenaWallet from "./pages/ArenaWallet"; 
 import Leaderboard from "./pages/Leaderboard";
 import Support from "./pages/Support"; 
+import CarromGame from "./pages/CarromGame"; // Agar Carrom route chahiye toh
 
 // 🛡️ Protected Route Component to secure pages from unauthenticated access
 const ProtectedRoute = ({ children }) => {
@@ -34,7 +35,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* PROTECTED ROUTES (Bina Login ke access nahi milga) */}
+      {/* PROTECTED ROUTES */}
       <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/games" element={<ProtectedRoute><Games /></ProtectedRoute>} />
       <Route path="/games/:gameName" element={<ProtectedRoute><GameDetail /></ProtectedRoute>} />
@@ -47,8 +48,11 @@ function App() {
       <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      
+      {/* Carrom Route (Agar kabhi open karna ho) */}
+      <Route path="/carrom" element={<ProtectedRoute><CarromGame /></ProtectedRoute>} />
 
-      {/* Catch-all redirect to login (Yeh hamesha sabse last me hona chahiye) */}
+      {/* Catch-all redirect to login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
 
     </Routes>
