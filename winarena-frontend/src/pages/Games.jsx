@@ -13,12 +13,8 @@ export default function Games() {
     // Agar Free Fire hai toh GameDetail page par bhej do
     if (formatted.includes("freefire")) {
       navigate(`/games/freefire`);
-    } 
-    // Agar Carrom hai toh seedha Carrom game route (/carrom) par bhej do
-    else if (formatted.includes("carrom")) {
-      navigate(`/carrom`);
     } else {
-      // Baaki games (jaise Ludo) ke liye "Coming Soon" popup dikhao
+      // Baaki games (jaise Carrom aur Ludo) ke liye "Coming Soon" popup dikhao
       setSelectedGame(gameName);
       setShowAlert(true);
     }
@@ -65,28 +61,28 @@ export default function Games() {
           </div>
         </div>
 
-        {/* CARROM CARD (Now Active / Playable) */}
+        {/* CARROM CARD (Coming Soon) */}
         <div 
           onClick={() => handleGameClick("Carrom")}
           style={{ 
             background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", 
             borderRadius: "16px", 
-            border: "2px solid #3b82f6", 
+            border: "1px solid rgba(255,255,255,0.1)", 
             overflow: "hidden", 
             cursor: "pointer",
-            boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)"
+            opacity: 0.85
           }}
         >
           <div style={{ padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <span style={{ background: "#3b82f6", color: "#fff", fontSize: "9px", fontWeight: "900", padding: "3px 8px", borderRadius: "4px" }}>
-                ● PLAY NOW
+              <span style={{ background: "#f59e0b", color: "#000", fontSize: "9px", fontWeight: "900", padding: "3px 8px", borderRadius: "4px" }}>
+                ⏳ COMING SOON
               </span>
               <h2 style={{ fontSize: "18px", margin: "8px 0 4px 0", fontWeight: "900", color: "#fff" }}>CARROM</h2>
               <p style={{ margin: 0, fontSize: "11px", color: "#9ca3af" }}>Real-time Board Match</p>
             </div>
-            <button style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "800", fontSize: "12px", cursor: "pointer" }}>
-              PLAY 🎯
+            <button style={{ background: "rgba(255,255,255,0.1)", color: "#9ca3af", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "800", fontSize: "12px", cursor: "pointer" }}>
+              SOON
             </button>
           </div>
         </div>
@@ -119,7 +115,7 @@ export default function Games() {
 
       </div>
 
-      {/* ANIMATED COMING SOON MODAL ALERT (For other upcoming games) */}
+      {/* ANIMATED COMING SOON MODAL ALERT */}
       {showAlert && (
         <div style={{
           position: "fixed",
@@ -142,8 +138,7 @@ export default function Games() {
             textAlign: "center",
             maxWidth: "320px",
             width: "85%",
-            boxShadow: "0 10px 30px rgba(251, 191, 36, 0.3)",
-            animation: "popIn 0.3s ease-out forwards"
+            boxShadow: "0 10px 30px rgba(251, 191, 36, 0.3)"
           }}>
             <div style={{ fontSize: "40px", marginBottom: "10px" }}>🚀</div>
             <h2 style={{ color: "#fbbf24", fontSize: "18px", margin: "0 0 8px 0", fontWeight: "900" }}>

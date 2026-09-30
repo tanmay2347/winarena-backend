@@ -14,7 +14,6 @@ import WalletDetails from "./pages/WalletDetails";
 import ArenaWallet from "./pages/ArenaWallet"; 
 import Leaderboard from "./pages/Leaderboard";
 import Support from "./pages/Support"; 
-import CarromGame from "./pages/CarromGame"; // 👈 Carrom component imported here
 
 // 🛡️ Protected Route Component to secure pages from unauthenticated access
 const ProtectedRoute = ({ children }) => {
@@ -48,9 +47,6 @@ function App() {
       <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      
-      {/* CARROM GAME ROUTE */}
-      <Route path="/carrom" element={<ProtectedRoute><CarromGame /></ProtectedRoute>} />
 
       {/* Catch-all redirect to login (Yeh hamesha sabse last me hona chahiye) */}
       <Route path="*" element={<Navigate to="/login" replace />} />
