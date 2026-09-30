@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { FaTrophy, FaGamepad, FaPercent, FaWallet, FaUserEdit, FaTelegramPlane, FaShieldAlt, FaGift, FaHistory, FaHeadset, FaInfoCircle, FaSignOutAlt, FaTimes } from 'react-icons/fa';
 
 export default function Profile() {
     const navigate = useNavigate();
     
     const [user, setUser] = useState({
-        name: localStorage.getItem('userName') || "Paras",
-        email: localStorage.getItem('userEmail') || "paras@gmail.com",
-        mobile: localStorage.getItem('userMobile') || "+91 9876543210",
+        name: "Paras",
+        email: "paras@gmail.com",
+        mobile: "",
         playerId: "WA912815",
         telegramLinked: false,
         telegramUsername: "",
@@ -18,16 +19,36 @@ export default function Profile() {
         totalWins: 0,
         totalGames: 0,
         winRate: "0%",
-        walletBalance: parseFloat(localStorage.getItem('walletBalance')) || 0.00
+        walletBalance: 0.00
     });
 
-    // Modals state
-    const [activeModal, setActiveModal] = useState(null); // 'edit', 'telegram', 'security', 'rewards', 'history', 'support', 'about'
-    const [tempName, setTempName] = useState(user.name);
-    const [tempEmail, setTempEmail] = useState(user.email);
-    const [tempMobile, setTempMobile] = useState(user.mobile);
+    const [activeModal, setActiveModal] = useState(null);
+    const [tempName, setTempName] = useState("");
+    const [tempEmail, setTempEmail] = useState("");
+    const [tempMobile, setTempMobile] = useState("");
     const [telegramInput, setTelegramInput] = useState("");
     const [copied, setCopied] = useState(false);
+
+    // Fetch live user profile and balance from backend database
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            try {
+                const storedEmail = localStorage.getItem('userEmail') || "paras@gmail.com";
+                // Render live backend URL
+                const response = await axios.get(`https://winarena-backend-1.onrender.com/api/user/profile?email=${storedEmail}`);
+                if (response.data.success) {
+                    setUser(response.data.user);
+                    setTempName(response.data.user.name);
+                    setTempEmail(response.data.user.email);
+                    setTempMobile(response.data.user.mobile || "");
+                }
+            } catch (err) {
+                console.error("Error fetching user profile from database:", err);
+            }
+        };
+
+        fetchUserProfile();
+    }, []);
 
     const handleCopyId = () => {
         navigator.clipboard.writeText(user.playerId);
@@ -35,13 +56,25 @@ export default function Profile() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleSaveProfile = (e) => {
+    const handleSaveProfile = async (e) => {
         e.preventDefault();
-        setUser(prev => ({ ...prev, name: tempName, email: tempEmail, mobile: tempMobile }));
-        localStorage.setItem('userName', tempName);
-        localStorage.setItem('userEmail', tempEmail);
-        localStorage.setItem('userMobile', tempMobile);
-        setActiveModal(null);
+        try {
+            // Optional: Backend par update karne ke liye API call
+            await axios.post('https://winarena-backend-1.onrender.com/api/user/register', {
+                name: tempName,
+                email: tempEmail,
+                mobile: tempMobile
+            });
+
+            setUser(prev => ({ ...prev, name: tempName, email: tempEmail, mobile: tempMobile }));
+            localStorage.setItem('userName', tempName);
+            localStorage.setItem('userEmail', tempEmail);
+            localStorage.setItem('userMobile', tempMobile);
+            setActiveModal(null);
+        } catch (err) {
+            console.error("Error updating profile:", err);
+            alert("Failed to update profile");
+        }
     };
 
     const handleLinkTelegram = (e) => {
@@ -124,9 +157,8 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Menu Options List with Working Functions */}
+            {/* Menu Options List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                
                 <div onClick={() => setActiveModal('edit')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaUserEdit color="#38bdf8" size={20} />
@@ -213,15 +245,12 @@ export default function Profile() {
                     </div>
                     <span style={{ color: '#ef4444', fontSize: '18px' }}>›</span>
                 </div>
-
             </div>
 
             {/* --- ALL MODALS --- */}
             {activeModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 1000 }}>
                     <div style={{ background: '#111827', border: '1px solid #374151', borderRadius: '16px', padding: '25px', width: '100%', maxWidth: '400px', position: 'relative', color: '#fff' }}>
-                        
-                        {/* Close Icon */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ margin: 0, color: '#38bdf8' }}>
                                 {activeModal === 'edit' && 'Edit Profile'}
@@ -235,7 +264,6 @@ export default function Profile() {
                             <FaTimes color="#94a3b8" size={20} style={{ cursor: 'pointer' }} onClick={() => setActiveModal(null)} />
                         </div>
 
-                        {/* 1. Edit Profile Modal */}
                         {activeModal === 'edit' && (
                             <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                 <div>
@@ -254,7 +282,6 @@ export default function Profile() {
                             </form>
                         )}
 
-                        {/* 2. Telegram Modal */}
                         {activeModal === 'telegram' && (
                             <form onSubmit={handleLinkTelegram} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                 <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Enter your Telegram username to get tournament room IDs and updates directly.</p>
@@ -266,22 +293,16 @@ export default function Profile() {
                             </form>
                         )}
 
-                        {/* 3. Account Security Modal */}
                         {activeModal === 'security' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#cbd5e1' }}>
                                 <div style={{ background: '#1f2937', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>Password Status</span>
                                     <span style={{ color: '#22c55e', fontWeight: 'bold' }}>Secure</span>
                                 </div>
-                                <div style={{ background: '#1f2937', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>Two-Factor Auth (2FA)</span>
-                                    <span style={{ color: '#facc15' }}>Disabled</span>
-                                </div>
                                 <button onClick={() => alert("Password reset link sent to email!")} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>Change Password</button>
                             </div>
                         )}
 
-                        {/* 4. My Rewards Modal */}
                         {activeModal === 'rewards' && (
                             <div style={{ textAlign: 'center', padding: '10px 0' }}>
                                 <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎁</div>
@@ -290,7 +311,6 @@ export default function Profile() {
                             </div>
                         )}
 
-                        {/* 5. Transaction History Modal */}
                         {activeModal === 'history' && (
                             <div>
                                 <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '15px' }}>Recent transactions:</p>
@@ -300,7 +320,6 @@ export default function Profile() {
                             </div>
                         )}
 
-                        {/* 6. Help & Support Modal */}
                         {activeModal === 'support' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Need help with tournaments or deposits? Contact our 24/7 AI Support.</p>
@@ -308,14 +327,11 @@ export default function Profile() {
                             </div>
                         )}
 
-                        {/* 7. About WinArena Modal */}
                         {activeModal === 'about' && (
                             <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.6' }}>
                                 <p style={{ margin: '0 0 10px 0' }}><strong style={{ color: '#fff' }}>WinArena v1.0.0</strong> is India's ultimate eSports tournament platform.</p>
-                                <p style={{ margin: 0 }}>All matches are fair-play regulated. Read our Terms of Service & Privacy Policy on our main portal.</p>
                             </div>
                         )}
-
                     </div>
                 </div>
             )}
