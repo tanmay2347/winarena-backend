@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaTrophy, FaGamepad, FaPercent, FaWallet, FaUserEdit, FaTelegramPlane, FaShieldAlt, FaGift, FaHistory, FaHeadset, FaInfoCircle, FaSignOutAlt, FaTimes } from 'react-icons/fa';
 
 export default function Profile() {
     const navigate = useNavigate();
     
-    // User data state (localStorage ya default values)
     const [user, setUser] = useState({
         name: localStorage.getItem('userName') || "Paras",
         email: localStorage.getItem('userEmail') || "paras@gmail.com",
@@ -22,10 +21,12 @@ export default function Profile() {
         walletBalance: parseFloat(localStorage.getItem('walletBalance')) || 0.00
     });
 
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    // Modals state
+    const [activeModal, setActiveModal] = useState(null); // 'edit', 'telegram', 'security', 'rewards', 'history', 'support', 'about'
     const [tempName, setTempName] = useState(user.name);
     const [tempEmail, setTempEmail] = useState(user.email);
     const [tempMobile, setTempMobile] = useState(user.mobile);
+    const [telegramInput, setTelegramInput] = useState("");
     const [copied, setCopied] = useState(false);
 
     const handleCopyId = () => {
@@ -40,7 +41,13 @@ export default function Profile() {
         localStorage.setItem('userName', tempName);
         localStorage.setItem('userEmail', tempEmail);
         localStorage.setItem('userMobile', tempMobile);
-        setIsEditModalOpen(false);
+        setActiveModal(null);
+    };
+
+    const handleLinkTelegram = (e) => {
+        e.preventDefault();
+        setUser(prev => ({ ...prev, telegramLinked: true, telegramUsername: telegramInput }));
+        setActiveModal(null);
     };
 
     const handleLogout = () => {
@@ -51,7 +58,7 @@ export default function Profile() {
     return (
         <div style={{ background: '#0b0f19', color: '#fff', minHeight: '100vh', padding: '15px 15px 90px 15px', fontFamily: 'sans-serif', position: 'relative' }}>
             
-            {/* Top Header Balance & Title */}
+            {/* Top Header Balance */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '20px', fontWeight: 'bold' }}>
                     <span>👤</span> My Profile
@@ -69,13 +76,13 @@ export default function Profile() {
                     </div>
                     <div>
                         <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {user.name} <span style={{ fontSize: '14px', cursor: 'pointer' }} onClick={() => setIsEditModalOpen(true)}>✏️</span>
+                            {user.name} <span style={{ fontSize: '14px', cursor: 'pointer' }} onClick={() => setActiveModal('edit')}>✏️</span>
                         </div>
                         <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                             Player ID: {user.playerId} 
                             <span onClick={handleCopyId} style={{ cursor: 'pointer', color: '#38bdf8' }}>📋</span>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px', cursor: 'pointer' }} onClick={() => alert("Telegram link feature coming soon!")}>
+                        <div style={{ fontSize: '12px', color: user.telegramLinked ? '#22c55e' : '#ef4444', marginTop: '4px', cursor: 'pointer' }} onClick={() => setActiveModal('telegram')}>
                             {user.telegramLinked ? `Telegram: ${user.telegramUsername}` : "Telegram: Not Linked (Click to link)"}
                         </div>
                     </div>
@@ -83,7 +90,7 @@ export default function Profile() {
 
                 {copied && <div style={{ fontSize: '11px', color: '#22c55e', marginBottom: '8px' }}>Player ID copied!</div>}
 
-                {/* Level Progress Bar */}
+                {/* Level Progress */}
                 <div style={{ background: '#1a233a', padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ background: '#7c3aed', color: '#fff', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>👑 Level {user.level}</span>
                     <div style={{ flex: 1, margin: '0 15px', background: '#334155', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
@@ -117,11 +124,10 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Menu Options List with Real Functions */}
+            {/* Menu Options List with Working Functions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 
-                {/* Edit Profile Button */}
-                <div onClick={() => setIsEditModalOpen(true)} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div onClick={() => setActiveModal('edit')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaUserEdit color="#38bdf8" size={20} />
                         <div>
@@ -132,7 +138,7 @@ export default function Profile() {
                     <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
 
-                <div onClick={() => alert("Telegram linking feature")} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div onClick={() => setActiveModal('telegram')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaTelegramPlane color="#38bdf8" size={20} />
                         <div>
@@ -143,7 +149,7 @@ export default function Profile() {
                     <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
 
-                <div onClick={() => alert("Security settings modal")} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div onClick={() => setActiveModal('security')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaShieldAlt color="#38bdf8" size={20} />
                         <div>
@@ -154,7 +160,7 @@ export default function Profile() {
                     <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
 
-                <div onClick={() => alert("No rewards available yet!")} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div onClick={() => setActiveModal('rewards')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaGift color="#ef4444" size={20} />
                         <div>
@@ -165,7 +171,7 @@ export default function Profile() {
                     <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
 
-                <div onClick={() => navigate('/history')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div onClick={() => setActiveModal('history')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaHistory color="#38bdf8" size={20} />
                         <div>
@@ -176,7 +182,7 @@ export default function Profile() {
                     <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
 
-                <div onClick={() => navigate('/ai-support')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div onClick={() => setActiveModal('support')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaHeadset color="#38bdf8" size={20} />
                         <div>
@@ -187,7 +193,7 @@ export default function Profile() {
                     <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
 
-                <div onClick={() => alert("WinArena v1.0.0 - All rights reserved.")} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div onClick={() => setActiveModal('about')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaInfoCircle color="#38bdf8" size={20} />
                         <div>
@@ -210,29 +216,106 @@ export default function Profile() {
 
             </div>
 
-            {/* Edit Profile Modal Popup */}
-            {isEditModalOpen && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 1000 }}>
-                    <div style={{ background: '#111827', border: '1px solid #374151', borderRadius: '16px', padding: '25px', width: '100%', maxWidth: '400px', position: 'relative' }}>
+            {/* --- ALL MODALS --- */}
+            {activeModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 1000 }}>
+                    <div style={{ background: '#111827', border: '1px solid #374151', borderRadius: '16px', padding: '25px', width: '100%', maxWidth: '400px', position: 'relative', color: '#fff' }}>
+                        
+                        {/* Close Icon */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0, color: '#38bdf8' }}>Edit Profile</h3>
-                            <FaTimes color="#94a3b8" size={20} style={{ cursor: 'pointer' }} onClick={() => setIsEditModalOpen(false)} />
+                            <h3 style={{ margin: 0, color: '#38bdf8' }}>
+                                {activeModal === 'edit' && 'Edit Profile'}
+                                {activeModal === 'telegram' && 'Telegram Account'}
+                                {activeModal === 'security' && 'Account Security'}
+                                {activeModal === 'rewards' && 'My Rewards'}
+                                {activeModal === 'history' && 'Transaction History'}
+                                {activeModal === 'support' && 'Help & Support'}
+                                {activeModal === 'about' && 'About WinArena'}
+                            </h3>
+                            <FaTimes color="#94a3b8" size={20} style={{ cursor: 'pointer' }} onClick={() => setActiveModal(null)} />
                         </div>
-                        <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            <div>
-                                <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Name</label>
-                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', color: '#fff', padding: '10px', borderRadius: '8px' }} required />
+
+                        {/* 1. Edit Profile Modal */}
+                        {activeModal === 'edit' && (
+                            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Name</label>
+                                    <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', color: '#fff', padding: '10px', borderRadius: '8px' }} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Email</label>
+                                    <input type="email" value={tempEmail} onChange={(e) => setTempEmail(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', color: '#fff', padding: '10px', borderRadius: '8px' }} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Mobile Number</label>
+                                    <input type="text" value={tempMobile} onChange={(e) => setTempMobile(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', color: '#fff', padding: '10px', borderRadius: '8px' }} required />
+                                </div>
+                                <button type="submit" style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>Save Changes</button>
+                            </form>
+                        )}
+
+                        {/* 2. Telegram Modal */}
+                        {activeModal === 'telegram' && (
+                            <form onSubmit={handleLinkTelegram} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Enter your Telegram username to get tournament room IDs and updates directly.</p>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Telegram Username (@username)</label>
+                                    <input type="text" placeholder="@yourusername" value={telegramInput} onChange={(e) => setTelegramInput(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', color: '#fff', padding: '10px', borderRadius: '8px' }} required />
+                                </div>
+                                <button type="submit" style={{ background: '#38bdf8', color: '#000', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Link Telegram</button>
+                            </form>
+                        )}
+
+                        {/* 3. Account Security Modal */}
+                        {activeModal === 'security' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#cbd5e1' }}>
+                                <div style={{ background: '#1f2937', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Password Status</span>
+                                    <span style={{ color: '#22c55e', fontWeight: 'bold' }}>Secure</span>
+                                </div>
+                                <div style={{ background: '#1f2937', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Two-Factor Auth (2FA)</span>
+                                    <span style={{ color: '#facc15' }}>Disabled</span>
+                                </div>
+                                <button onClick={() => alert("Password reset link sent to email!")} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>Change Password</button>
                             </div>
-                            <div>
-                                <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Email</label>
-                                <input type="email" value={tempEmail} onChange={(e) => setTempEmail(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', color: '#fff', padding: '10px', borderRadius: '8px' }} required />
+                        )}
+
+                        {/* 4. My Rewards Modal */}
+                        {activeModal === 'rewards' && (
+                            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                                <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎁</div>
+                                <p style={{ color: '#94a3b8', fontSize: '14px' }}>You currently have no active bonuses or cashbacks.</p>
+                                <button onClick={() => setActiveModal(null)} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '15px' }}>Okay</button>
                             </div>
+                        )}
+
+                        {/* 5. Transaction History Modal */}
+                        {activeModal === 'history' && (
                             <div>
-                                <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Mobile Number</label>
-                                <input type="text" value={tempMobile} onChange={(e) => setTempMobile(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', color: '#fff', padding: '10px', borderRadius: '8px' }} required />
+                                <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '15px' }}>Recent transactions:</p>
+                                <div style={{ background: '#1f2937', padding: '12px', borderRadius: '8px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+                                    No recent transactions found.
+                                </div>
                             </div>
-                            <button type="submit" style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>Save Changes</button>
-                        </form>
+                        )}
+
+                        {/* 6. Help & Support Modal */}
+                        {activeModal === 'support' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Need help with tournaments or deposits? Contact our 24/7 AI Support.</p>
+                                <button onClick={() => { setActiveModal(null); navigate('/ai-support'); }} style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Open AI Game Support</button>
+                            </div>
+                        )}
+
+                        {/* 7. About WinArena Modal */}
+                        {activeModal === 'about' && (
+                            <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.6' }}>
+                                <p style={{ margin: '0 0 10px 0' }}><strong style={{ color: '#fff' }}>WinArena v1.0.0</strong> is India's ultimate eSports tournament platform.</p>
+                                <p style={{ margin: 0 }}>All matches are fair-play regulated. Read our Terms of Service & Privacy Policy on our main portal.</p>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             )}
