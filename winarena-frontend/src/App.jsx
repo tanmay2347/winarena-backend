@@ -14,7 +14,7 @@ import WalletDetails from "./pages/WalletDetails";
 import ArenaWallet from "./pages/ArenaWallet"; 
 import Leaderboard from "./pages/Leaderboard";
 import Support from "./pages/Support"; 
-import CarromGame from "./pages/CarromGame"; // Agar Carrom route chahiye toh
+
 
 // 🛡️ Protected Route Component to secure pages from unauthenticated access
 const ProtectedRoute = ({ children }) => {
