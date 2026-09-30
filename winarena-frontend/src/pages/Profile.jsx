@@ -34,7 +34,6 @@ export default function Profile() {
         const fetchUserProfile = async () => {
             try {
                 const storedEmail = localStorage.getItem('userEmail') || "paras@gmail.com";
-                // Render live backend URL
                 const response = await axios.get(`https://winarena-backend-1.onrender.com/api/user/profile?email=${storedEmail}`);
                 if (response.data.success) {
                     setUser(response.data.user);
@@ -59,7 +58,6 @@ export default function Profile() {
     const handleSaveProfile = async (e) => {
         e.preventDefault();
         try {
-            // Optional: Backend par update karne ke liye API call
             await axios.post('https://winarena-backend-1.onrender.com/api/user/register', {
                 name: tempName,
                 email: tempEmail,
@@ -214,7 +212,8 @@ export default function Profile() {
                     <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
 
-                <div onClick={() => setActiveModal('support')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                {/* Help & Support Button connected to /support page */}
+                <div onClick={() => navigate('/support')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <FaHeadset color="#38bdf8" size={20} />
                         <div>
@@ -258,7 +257,6 @@ export default function Profile() {
                                 {activeModal === 'security' && 'Account Security'}
                                 {activeModal === 'rewards' && 'My Rewards'}
                                 {activeModal === 'history' && 'Transaction History'}
-                                {activeModal === 'support' && 'Help & Support'}
                                 {activeModal === 'about' && 'About WinArena'}
                             </h3>
                             <FaTimes color="#94a3b8" size={20} style={{ cursor: 'pointer' }} onClick={() => setActiveModal(null)} />
@@ -317,13 +315,6 @@ export default function Profile() {
                                 <div style={{ background: '#1f2937', padding: '12px', borderRadius: '8px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
                                     No recent transactions found.
                                 </div>
-                            </div>
-                        )}
-
-                        {activeModal === 'support' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Need help with tournaments or deposits? Contact our 24/7 AI Support.</p>
-                                <button onClick={() => { setActiveModal(null); navigate('/ai-support'); }} style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Open AI Game Support</button>
                             </div>
                         )}
 
