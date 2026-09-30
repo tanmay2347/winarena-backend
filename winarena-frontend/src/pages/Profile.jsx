@@ -1,42 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { FaHistory, FaUserEdit, FaHeadset, FaSignOutAlt, FaWallet, FaBell, FaGift, FaCopy, FaUser } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FaTrophy, FaGamepad, FaPercent, FaWallet, FaUserEdit, FaTelegramPlane, FaShieldAlt, FaGift, FaHistory, FaHeadset, FaInfoCircle, FaSignOutAlt } from 'react-icons/fa';
 
-export default function AdvancedProfile() {
+export default function Profile() {
     const navigate = useNavigate();
-    const [user, setUser] = useState({
-        name: "Tanmay D",
-        email: "tanmay@gmail.com", // Aapke screenshot wala email
-        mobile: "+91 9876543210",
-        walletBalance: 332.00, // Aapke screenshot wala balance
-        referralCode: "WA-TANMAY8563",
+    const [stats] = useState({
+        totalWins: 0,
+        totalGames: 0,
+        winRate: "0%",
+        totalBalance: 11961.00
     });
-    const [loading, setLoading] = useState(false);
-    const [copied, setCopied] = useState(false);
-    const [notifications, setNotifications] = useState(3);
-
-    useEffect(() => {
-        // fetchUserProfile(); // Real backend se fetch karne ke liye uncomment karein
-    }, []);
-
-    const fetchUserProfile = async () => {
-        try {
-            const storedEmail = localStorage.getItem('userEmail') || "tanmay@gmail.com";
-            const response = await axios.get(`https://winarena-backend-1.onrender.com/api/user/profile?email=${storedEmail}`);
-            if (response.data.success) {
-                setUser(response.data.user);
-            }
-        } catch (err) {
-            console.error("Error fetching profile details:", err);
-        }
-    };
-
-    const handleCopyReferral = () => {
-        navigator.clipboard.writeText(user.referralCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
 
     const handleLogout = () => {
         localStorage.clear();
@@ -44,81 +17,131 @@ export default function AdvancedProfile() {
     };
 
     return (
-        <div style={{ background: '#080b12', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', position: 'relative' }}>
-                <button 
-                    onClick={() => navigate(-1)} 
-                    style={{ background: 'transparent', border: '1px solid #38bdf8', color: '#38bdf8', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px' }}
-                >
-                    ← Back
-                </button>
-                <h2 style={{ flex: 1, textAlign: 'center', margin: 0, color: '#38bdf8', fontWeight: 'bold', fontSize: '24px' }}>My Profile</h2>
-                <div style={{ position: 'absolute', right: 0, cursor: 'pointer', color: '#94a3b8' }}>
-                    <FaBell size={24} />
-                    {notifications > 0 && <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: '#fff', fontSize: '10px', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{notifications}</span>}
-                </div>
-            </div>
-
-            {/* Profile Card */}
-            <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '20px', padding: '30px', maxWidth: '500px', margin: '0 auto', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', textAlign: 'center', marginBottom: '30px' }}>
-                <div style={{ position: 'relative', width: '100px', height: '100px', background: '#3b82f6', borderRadius: '50%', margin: '0 auto 15px auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold', color: '#fff', boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)' }}>
-                    {user.name.charAt(0).toUpperCase()}
-                </div>
-                <h3 style={{ margin: '10px 0 5px 0', color: '#f9fafb', fontSize: '28px', fontWeight: '700' }}>{user.name}</h3>
-                <p style={{ margin: 0, color: '#94a3b8', fontSize: '16px' }}>{user.email}</p>
-                <p style={{ margin: '8px 0 0 0', color: '#d1d5db', fontSize: '16px', fontWeight: '500' }}>{user.mobile}</p>
+        <div style={{ background: '#0b0f19', color: '#fff', minHeight: '100vh', padding: '15px 15px 80px 15px', fontFamily: 'sans-serif' }}>
             
-                {/* Wallet Card Inside Profile */}
-                <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '15px', padding: '20px', marginTop: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Top 4 Stats Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '20px' }}>
+                <div style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '12px', padding: '12px 5px', textAlign: 'center' }}>
+                    <FaTrophy color="#facc15" size={18} style={{ marginBottom: '5px' }} />
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Total Wins</div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginTop: '4px' }}>{stats.totalWins}</div>
+                </div>
+                <div style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '12px', padding: '12px 5px', textAlign: 'center' }}>
+                    <FaGamepad color="#38bdf8" size={18} style={{ marginBottom: '5px' }} />
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Total Games</div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginTop: '4px' }}>{stats.totalGames}</div>
+                </div>
+                <div style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '12px', padding: '12px 5px', textAlign: 'center' }}>
+                    <FaPercent color="#facc15" size={18} style={{ marginBottom: '5px' }} />
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Win Rate</div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginTop: '4px' }}>{stats.winRate}</div>
+                </div>
+                <div style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '12px', padding: '12px 5px', textAlign: 'center' }}>
+                    <FaWallet color="#facc15" size={18} style={{ marginBottom: '5px' }} />
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Total Balance</div>
+                    <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#22c55e', marginTop: '4px' }}>₹{stats.totalBalance.toFixed(2)}</div>
+                </div>
+            </div>
+
+            {/* Menu Options List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* Edit Profile */}
+                <div onClick={() => navigate('/edit-profile')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <FaWallet size={24} color="#38bdf8" />
+                        <FaUserEdit color="#38bdf8" size={22} />
                         <div>
-                            <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>Wallet Balance</p>
-                            <p style={{ margin: '5px 0 0 0', color: '#22c55e', fontSize: '24px', fontWeight: 'bold' }}>₹{user.walletBalance.toFixed(2)}</p>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>Edit Profile</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Update your name, email, mobile number</div>
                         </div>
                     </div>
-                    <button style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Add Cash</button>
+                    <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
-            </div>
 
-            {/* Action Buttons Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', maxWidth: '800px', margin: '0 auto' }}>
-                <Link to="/edit-profile" style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '15px', padding: '20px', textDecoration: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-                    <FaUserEdit size={24} color="#38bdf8" />
-                    <span style={{ fontSize: '18px', fontWeight: '500' }}>Edit Profile</span>
-                </Link>
-                <Link to="/history" style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '15px', padding: '20px', textDecoration: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-                    <FaHistory size={24} color="#eab308" />
-                    <span style={{ fontSize: '18px', fontWeight: '500' }}>Transaction History</span>
-                </Link>
-                <Link to="/ai-support" style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '15px', padding: '20px', textDecoration: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-                    <FaHeadset size={24} color="#22c55e" />
-                    <span style={{ fontSize: '18px', fontWeight: '500' }}>AI Game Support</span>
-                </Link>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '15px', padding: '20px', display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-                    <FaGift size={24} color="#ec4899" />
-                    <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: '16px', color: '#94a3b8' }}>Referral Code</span>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '5px' }}>
-                            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#f9fafb' }}>{user.referralCode}</span>
-                            <button onClick={handleCopyReferral} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                                <FaCopy size={18} />
-                            </button>
+                {/* Telegram Account */}
+                <div onClick={() => navigate('/telegram')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaTelegramPlane color="#38bdf8" size={22} />
+                        <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>Telegram Account</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Link your Telegram for updates & room IDs</div>
                         </div>
-                        {copied && <span style={{ color: '#22c55e', fontSize: '12px' }}>Copied!</span>}
                     </div>
+                    <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
                 </div>
-            </div>
 
-            {/* Logout Button */}
-            <button 
-                onClick={handleLogout}
-                style={{ width: '100%', maxWidth: '300px', margin: '40px auto 0 auto', display: 'block', background: '#ef4444', color: '#fff', border: 'none', padding: '15px', borderRadius: '12px', fontWeight: 'bold', fontSize: '18px', cursor: 'pointer', boxShadow: '0 5px 15px rgba(239, 68, 68, 0.3)' }}
-            >
-                <FaSignOutAlt style={{ marginRight: '10px' }} />
-                Logout
-            </button>
+                {/* Account Security */}
+                <div onClick={() => navigate('/security')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaShieldAlt color="#38bdf8" size={22} />
+                        <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>Account Security</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Change password, 2FA, linked accounts</div>
+                        </div>
+                    </div>
+                    <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
+                </div>
+
+                {/* My Rewards */}
+                <div onClick={() => navigate('/rewards')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaGift color="#ef4444" size={22} />
+                        <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>My Rewards</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>View your bonuses & cashback</div>
+                        </div>
+                    </div>
+                    <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
+                </div>
+
+                {/* Transaction History */}
+                <div onClick={() => navigate('/history')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaHistory color="#38bdf8" size={22} />
+                        <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>Transaction History</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>View deposits, withdrawals & game history</div>
+                        </div>
+                    </div>
+                    <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
+                </div>
+
+                {/* Help & Support */}
+                <div onClick={() => navigate('/ai-support')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaHeadset color="#38bdf8" size={22} />
+                        <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>Help & Support</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>FAQs, contact us, raise a ticket</div>
+                        </div>
+                    </div>
+                    <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
+                </div>
+
+                {/* About WinArena */}
+                <div onClick={() => navigate('/about')} style={{ background: '#131c31', border: '1px solid #1f2937', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaInfoCircle color="#38bdf8" size={22} />
+                        <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>About WinArena</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Terms, Privacy, Responsible Gaming</div>
+                        </div>
+                    </div>
+                    <span style={{ color: '#64748b', fontSize: '18px' }}>›</span>
+                </div>
+
+                {/* Log Out */}
+                <div onClick={handleLogout} style={{ background: '#1a131b', border: '1px solid #451a1a', borderRadius: '14px', padding: '15px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginTop: '5px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaSignOutAlt color="#ef4444" size={22} />
+                        <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#ef4444' }}>Log Out</div>
+                        </div>
+                    </div>
+                    <span style={{ color: '#ef4444', fontSize: '18px' }}>›</span>
+                </div>
+
+            </div>
         </div>
     );
 }
